@@ -12,12 +12,31 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+			"activitybar": [
+				{
+					"id": "addon-explorer",
+					"title": "CS-Cart Addon Explorer",
+					"icon": "media/addon.svg"
+				}
+			]
+		},
     "commands": [
       {
         "command": "cscart-development-helper.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "views": {
+      "addon-explorer": [
+				{
+					"id": "addonExplorer",
+					"name": "CS-Cart Addons",
+					"icon": "media/addon.svg",
+					"contextualTitle": "Addons"
+				}
+			]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
