@@ -25,8 +25,33 @@
       {
         "command": "cscart-development-helper.helloWorld",
         "title": "Hello World"
-      }
+      },
+      {
+				"command": "csAddonExplorer.refreshEntry",
+				"title": "Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
+			},
+      {
+				"command": "csAddonExplorer.open",
+				"title": "Open addon"
+			}
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "csAddonExplorer.refreshEntry",
+          "when": "view == csAddonExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "csAddonExplorer.open",
+          "when": "view == csAddonExplorer"
+        }
+      ]
+    },
     "views": {
       "cs-addon-explorer": [
         {

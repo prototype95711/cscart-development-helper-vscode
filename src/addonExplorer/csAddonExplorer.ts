@@ -25,7 +25,7 @@ export class AddonNodeProvider implements vscode.TreeDataProvider<Addon> {
 	getChildren(element?: Addon): Thenable<Addon[]> {
 
 		if (!this.workspaceRoot) {
-			vscode.window.showInformationMessage('No addon in empty workspace');
+			vscode.window.showInformationMessage('No CS-Cart addons in workspace');
 			return Promise.resolve([]);
 		}
 
@@ -128,8 +128,8 @@ export class Addon extends vscode.TreeItem {
 	}
 
 	iconPath = {
-		light: path.join(__filename, '..', '..', 'resources', 'light', 'addon.svg'),
-		dark: path.join(__filename, '..', '..', 'resources', 'dark', 'addon.svg')
+		light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'addon.svg'),
+		dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'addon.svg')
 	};
 
 	contextValue = 'addon';
