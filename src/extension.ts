@@ -2,9 +2,19 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
+import { AddonNodeProvider, Addon } from './csAddonExplorer';
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+
+	const rootPath = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
+		? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined;
+
+	// Register addons explorer
+	const addonExplorer = new AddonNodeProvider(rootPath);
+	vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
+	vscode.commands.registerCommand('addon.refreshEntry', () => addonExplorer.refresh());
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
