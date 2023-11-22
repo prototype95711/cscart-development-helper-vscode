@@ -1,23 +1,35 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-import { AddonNodeProvider, Addon } from './addonExplorer/csAddonExplorer';
-import { showAddonOpenerPopup } from './addonExplorer/csAddonOpener';
+import { getAddonsPath } from './addons/AddonsPath';
+import { AddonReader } from './addons/AddonReader';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+import { AddonExplorer, Addon, selectAddon } from './addons/AddonExplorer';
+import { showAddonPicker } from './addons/AddonPicker';
+
+import * as messages from './addons/AddonMessages';
+import { resolve } from 'path';
+
+
 export function activate(context: vscode.ExtensionContext) {
 
 	const rootPath = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
 		? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined;
 
-	// Register addons explorer
-	const addonExplorer = new AddonNodeProvider(rootPath);
-	vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
-	vscode.commands.registerCommand('csAddonExplorer.refreshEntry', () => addonExplorer.refresh());
-	vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonOpenerPopup(rootPath));
+	if (rootPath) {
+		// Register addons explorer
+		const addonsPath = getAddonsPath(rootPath);
+		const addonReader = new AddonReader(addonsPath);
 
+		const addonExplorer = new AddonExplorer(addonReader);
+		vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
+		vscode.commands.registerCommand('csAddonExplorer.refreshEntry', () => addonExplorer.refresh());
+		vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(addonReader, addonExplorer, selectAddon));
+
+	} else {
+		vscode.window.showInformationMessage(messages.NO_ADDONS_IN_WORKSPACE_ERROR);
+		return;
+	}
+	
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "cscart-development-helper" is now active!');
