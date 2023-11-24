@@ -1,13 +1,11 @@
 import * as vscode from 'vscode';
 
-import { getAddonsPath } from './addons/AddonsPath';
 import { AddonReader } from './addons/AddonReader';
 
 import { AddonExplorer, Addon, selectAddon } from './addons/AddonExplorer';
 import { showAddonPicker } from './addons/AddonPicker';
 
 import * as messages from './addons/AddonMessages';
-import { resolve } from 'path';
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -17,8 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	if (rootPath) {
 		// Register addons explorer
-		const addonsPath = getAddonsPath(rootPath);
-		const addonReader = new AddonReader(addonsPath);
+		const addonReader = new AddonReader(rootPath);
 
 		const addonExplorer = new AddonExplorer(addonReader);
 		vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);

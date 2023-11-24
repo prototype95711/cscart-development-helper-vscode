@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAddonPath } from './AddonsPath';
+import { getAddonDesignPathes, getAddonPath, getAddonsPath } from './AddonFiles';
+import { off } from 'process';
 
 const { parseString } = require('xml2js');
 
@@ -10,7 +11,10 @@ const ADDON_XML_INVALID_ERROR = 'addon.xml document is invalid???';
 
 export class AddonReader {
 
-    constructor(private addonsPath: string) {
+	private addonsPath: string = '';
+
+    constructor(public workspaceRoot: string) {
+		this.addonsPath = getAddonsPath(workspaceRoot);
 	}
 
 	getAddonData(addon: string): any {
@@ -52,6 +56,41 @@ export class AddonReader {
 		} else {
 			return [];
 		}
+	}
+
+	async getAddonFolders(addon: string, offset:number = 0, currentPath:string = ''): Promise<string[]> {
+		const addonDesignPathes = (await getAddonDesignPathes(this.workspaceRoot, addon))
+			.filter(folder => this.pathExists(folder));
+
+		const addonPathes = addonDesignPathes.map(_path => {
+
+			if (path && !_path.includes(currentPath)) {
+				return '';
+			}
+
+			const pathes = [];
+			const _distPath = _path.replace(this.workspaceRoot, '');
+			const pieces = _distPath.split('/').filter(dir => dir);
+			const nextFolderKey = offset === -1 ? 0 : offset + 1;
+
+			if (pieces.length <= nextFolderKey) {
+				return '';
+			}
+
+			for (let k = 0; k <= nextFolderKey; k++) {
+				pathes.push(pieces[k]);
+			}
+
+			const result = path.join(this.workspaceRoot, pathes.join('/'));
+
+			return result;
+		});
+
+		const onlyUnique = (value:string, index: number, array: string[]) => {
+			return array.indexOf(value) === index;
+		};
+		
+		return Promise.resolve(addonPathes.filter(dir => dir).filter(onlyUnique));
 	}
 
 	private pathExists(p: string): boolean {
