@@ -14,6 +14,8 @@ const DESIGN_PARTS = [
 	'templates'
 ];
 
+const JS_CATALOG = 'js';
+
 export function getAddonsPath(workspaceRoot: string | undefined) {
 
 	if (!workspaceRoot) {
@@ -23,7 +25,16 @@ export function getAddonsPath(workspaceRoot: string | undefined) {
 	return path.join(workspaceRoot, APP_CATALOG, ADDON_CATALOG);
 }
 
-export function getAddonPath(addonsPath: string | undefined, addon: string) {
+export async function getAddonPath(addonsPath: string | undefined, addon: string) {
+
+	if (!addonsPath) {
+		return '';
+	}
+
+	return path.join(addonsPath, addon);
+}
+
+export function getAddonXmlPath(addonsPath: string | undefined, addon: string) {
 
 	if (!addonsPath) {
 		return '';
@@ -47,4 +58,13 @@ export async function getAddonDesignPathes(workspaceRoot: string | undefined, ad
 	);
 	
 	return designBackendPathes.concat(designThemesPathes);
+}
+
+export async function getAddonJsPath(workspaceRoot: string | undefined, addon: string) {
+
+	if (!workspaceRoot) {
+		return '';
+	}
+
+	return path.join(workspaceRoot, JS_CATALOG, ADDON_CATALOG, addon);
 }

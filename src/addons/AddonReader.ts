@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAddonDesignPathes, getAddonPath, getAddonsPath } from './AddonFiles';
+import { getAddonDesignPathes, getAddonJsPath, getAddonPath, getAddonXmlPath, getAddonsPath } from './AddonFiles';
 import { off } from 'process';
 
 const { parseString } = require('xml2js');
@@ -19,7 +19,7 @@ export class AddonReader {
 
 	getAddonData(addon: string): any {
 		var addonJson = '';
-		const addonXml = fs.readFileSync(getAddonPath(this.addonsPath, addon), 'utf-8');
+		const addonXml = fs.readFileSync(getAddonXmlPath(this.addonsPath, addon), 'utf-8');
 
 		const reading = (err: any, result: any) => {
 			if (err || !result) {
@@ -59,10 +59,13 @@ export class AddonReader {
 	}
 
 	async getAddonFolders(addon: string, offset:number = 0, currentPath:string = ''): Promise<string[]> {
+		const addonPath = [(await getAddonPath(this.addonsPath, addon))].filter(folder => this.pathExists(folder));
 		const addonDesignPathes = (await getAddonDesignPathes(this.workspaceRoot, addon))
 			.filter(folder => this.pathExists(folder));
+		const addonJsPath = [(await getAddonJsPath(this.workspaceRoot, addon))].filter(folder => this.pathExists(folder));
+		const pathes = addonPath.concat(addonDesignPathes, addonJsPath);
 
-		const addonPathes = addonDesignPathes.map(_path => {
+		const addonPathes = pathes.map(_path => {
 
 			if (path && !_path.includes(currentPath)) {
 				return '';
