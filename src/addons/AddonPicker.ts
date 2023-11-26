@@ -24,10 +24,6 @@ export async function showAddonPicker(
 	});
 	addonPick.onDidHide(() => addonPick.dispose());
 	addonPick.show();
-	
-	/*const result = await window.showQuickPick(addonOpener.getAddonPickerList(), {
-		onDidSelectItem: item => window.showInformationMessage(`Focus ${++i}: ${item}`)
-	});*/
 }
 
 class AddonPicker {

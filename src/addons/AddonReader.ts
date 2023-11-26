@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAddonDesignPathes, getAddonJsPath, getAddonPath, getAddonXmlPath, getAddonsPath } from './AddonFiles';
-import { off } from 'process';
+import { getAddonDesignPathes, getAddonJsPath, getAddonPath, getAddonXmlPath, getAddonsPath, getTranslatesPath } from './AddonFiles'; 
+import { AddonPath, pathExists } from './AddonPath';
 
 const { parseString } = require('xml2js');
 
@@ -19,7 +19,7 @@ export class AddonReader {
 
 	getAddonData(addon: string): any {
 		var addonJson = '';
-		const addonXml = fs.readFileSync(getAddonXmlPath(this.addonsPath, addon), 'utf-8');
+		const addonXml = fs.readFileSync(getAddonXmlPath(this.addonsPath, addon).path, 'utf-8');
 
 		const reading = (err: any, result: any) => {
 			if (err || !result) {
@@ -39,13 +39,13 @@ export class AddonReader {
 
 	getAddons(): string[] {
 
-		if (this.pathExists(this.addonsPath)) {
+		if (pathExists(this.addonsPath)) {
 
             const getAddonNames = (addonsPath:string) =>
                 fs.readdirSync(addonsPath, { withFileTypes: true })
 				.filter(dirent => dirent.isDirectory())
 				.map(dirent => dirent.name).filter(
-					addon => this.pathExists(
+					addon => pathExists(
 						path.join(addonsPath, addon, ADDON_XML_FILENAME)
 					)
 			);
@@ -58,51 +58,51 @@ export class AddonReader {
 		}
 	}
 
-	async getAddonFolders(addon: string, offset:number = 0, currentPath:string = ''): Promise<string[]> {
-		const addonPath = [(await getAddonPath(this.addonsPath, addon))].filter(folder => this.pathExists(folder));
-		const addonDesignPathes = (await getAddonDesignPathes(this.workspaceRoot, addon))
-			.filter(folder => this.pathExists(folder));
-		const addonJsPath = [(await getAddonJsPath(this.workspaceRoot, addon))].filter(folder => this.pathExists(folder));
-		const pathes = addonPath.concat(addonDesignPathes, addonJsPath);
+	async getAddonPathes(addon: string, offset:number = 0, currentPath:string = ''): Promise<AddonPath[]> {
+		const addonPath = [(await getAddonPath(this.addonsPath, addon))];
+		const addonDesignPathes = (await getAddonDesignPathes(this.workspaceRoot, addon));
+		const addonJsPath = [(await getAddonJsPath(this.workspaceRoot, addon))];
+		const addonTranslatesPath = (await getTranslatesPath(this.workspaceRoot, addon));
+		
+		const pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(_path => _path && pathExists(_path.path));
 
 		const addonPathes = pathes.map(_path => {
 
-			if (path && !_path.includes(currentPath)) {
-				return '';
+			const _addonPath = new AddonPath(
+				'',
+				vscode.FileType.Unknown
+			);
+
+			if (
+				_path === null
+				|| (_path && !_path.path.includes(currentPath))
+			) {
+				return _addonPath;
 			}
 
 			const pathes = [];
-			const _distPath = _path.replace(this.workspaceRoot, '');
+			const _distPath = _path.path.replace(this.workspaceRoot, '');
 			const pieces = _distPath.split('/').filter(dir => dir);
 			const nextFolderKey = offset === -1 ? 0 : offset + 1;
 
 			if (pieces.length <= nextFolderKey) {
-				return '';
+				return _addonPath;
 			}
 
 			for (let k = 0; k <= nextFolderKey; k++) {
 				pathes.push(pieces[k]);
 			}
 
-			const result = path.join(this.workspaceRoot, pathes.join('/'));
+			_addonPath.path = path.join(this.workspaceRoot, pathes.join('/'));
+			_addonPath.type = pieces[nextFolderKey].includes('.') ? vscode.FileType.File : _path.type;
 
-			return result;
+			return _addonPath;
 		});
 
-		const onlyUnique = (value:string, index: number, array: string[]) => {
-			return array.indexOf(value) === index;
+		const onlyUnique = (value:AddonPath, index: number, array: AddonPath[]) => {
+			return array.findIndex(addonPath => addonPath.path === value.path) === index;
 		};
 		
-		return Promise.resolve(addonPathes.filter(dir => dir).filter(onlyUnique));
-	}
-
-	private pathExists(p: string): boolean {
-		try {
-			fs.accessSync(p);
-		} catch (err) {
-			return false;
-		}
-
-		return true;
+		return Promise.resolve(addonPathes.filter(_path => _path && _path.path).filter(onlyUnique));
 	}
 }

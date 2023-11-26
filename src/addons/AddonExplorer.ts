@@ -5,7 +5,6 @@ import * as mkdirp from 'mkdirp';
 import * as rimraf from 'rimraf';
 
 import { AddonReader } from './AddonReader';
-import { File } from 'buffer';
 
 const NO_SELECTED_ADDONS_ERROR = 'Not selected addons for work';
 
@@ -181,21 +180,20 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (element) {
 
 			if (element instanceof Addon) {
-				const addonFolders = await this.addonReader.getAddonFolders(element.label, -1);
-				const dirType = vscode.FileType.Directory;
+				const addonFolders = await this.addonReader.getAddonPathes(element.label, -1);
 				const result: AddonEntry[] = [];
 
-				addonFolders.forEach(folder => {
-					result.push({ uri: vscode.Uri.file(folder), type: dirType, addon: element.label, offset: 0});
+				addonFolders.forEach(_path => {
+					result.push({ uri: vscode.Uri.file(_path.path), type: _path.type, addon: element.label, offset: 0});
 				});
 
 				return result;
 
 			} else {
 				const offset = element.offset === -1 ? 1 : element.offset + 1;
-				const addonFolders = await this.addonReader.getAddonFolders(element.addon, element.offset, element.uri.path);
+				const addonPathes = await this.addonReader.getAddonPathes(element.addon, element.offset, element.uri.path);
 
-				if (addonFolders.length === 0) {
+				if (addonPathes.length === 0) {
 					const children = await this.readDirectory(element.uri);
 
 					children.sort((a, b) => {
@@ -216,13 +214,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 				} else {
 					const result: AddonEntry[] = [];
-					const dirType = vscode.FileType.Directory;
 
-					addonFolders.forEach(folder => {
+					addonPathes.forEach(_path => {
 						result.push(
 							{ 
-								uri: vscode.Uri.file(folder), 
-								type: dirType, 
+								uri: vscode.Uri.file(_path.path), 
+								type: _path.type, 
 								addon: element.addon, 
 								offset: offset
 							}

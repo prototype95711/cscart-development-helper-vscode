@@ -1,4 +1,7 @@
+import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
+import { AddonPath, pathExists } from './AddonPath';
 
 const APP_CATALOG = 'app';
 const ADDON_CATALOG = 'addons';
@@ -13,8 +16,14 @@ const DESIGN_PARTS = [
 	'media/images',
 	'templates'
 ];
+const DESIGN_THEME_MANIFEST_FILENAME = 'manifest.json';
 
 const JS_CATALOG = 'js';
+
+const VAR_PATH = 'var';
+const VAR_LANGS = 'langs';
+
+const VAR_LANG_FILE_EXTENSION = '.po';
 
 export function getAddonsPath(workspaceRoot: string | undefined) {
 
@@ -28,19 +37,24 @@ export function getAddonsPath(workspaceRoot: string | undefined) {
 export async function getAddonPath(addonsPath: string | undefined, addon: string) {
 
 	if (!addonsPath) {
-		return '';
+		return null;
 	}
 
-	return path.join(addonsPath, addon);
+	return new AddonPath(path.join(addonsPath, addon), vscode.FileType.Directory);
 }
 
 export function getAddonXmlPath(addonsPath: string | undefined, addon: string) {
 
-	if (!addonsPath) {
-		return '';
+	const _addonPath = new AddonPath(
+		'',
+		vscode.FileType.File
+	);
+
+	if (addonsPath) {
+		_addonPath.path = path.join(addonsPath, addon, ADDON_XML_FILENAME);
 	}
 
-	return path.join(addonsPath, addon, ADDON_XML_FILENAME);
+	return _addonPath;
 }
 
 export async function getAddonDesignPathes(workspaceRoot: string | undefined, addon: string) {
@@ -51,20 +65,77 @@ export async function getAddonDesignPathes(workspaceRoot: string | undefined, ad
 
 	const designPath = path.join(workspaceRoot, DESIGN_CATALOG);
 	const designBackendPathes = DESIGN_PARTS.map(
-		part => path.join(designPath, DESIGN_BACKEND_CATALOG, part, ADDON_CATALOG, addon)
-	);
-	const designThemesPathes = DESIGN_PARTS.map(
-		part => path.join(designPath, DESIGN_THEMES_CATALOG, part, ADDON_CATALOG, addon)
+		part => 
+			new AddonPath(
+				path.join(designPath, DESIGN_BACKEND_CATALOG, part, ADDON_CATALOG, addon),
+				vscode.FileType.Directory
+			)
 	);
 	
-	return designBackendPathes.concat(designThemesPathes);
+	const designThemesPathes = path.join(designPath, DESIGN_THEMES_CATALOG);
+
+	const getThemeNames = (designPath:string) =>
+		fs.readdirSync(designPath, { withFileTypes: true })
+		.filter(dirent => dirent.isDirectory())
+		.map(dirent => dirent.name).filter(
+			theme => pathExists(
+				path.join(designPath, theme, DESIGN_THEME_MANIFEST_FILENAME)
+			)
+	);
+	
+	const designThemesAddonPathes: AddonPath[] = [];
+
+	getThemeNames(designThemesPathes).forEach(
+		themePath => DESIGN_PARTS.map(
+			part => designThemesAddonPathes.push(
+				new AddonPath(
+					path.join(designThemesPathes, themePath, part, ADDON_CATALOG, addon),
+					vscode.FileType.Directory
+				)
+			)
+		)
+	);
+	
+	return designBackendPathes.concat(designThemesAddonPathes);
 }
 
 export async function getAddonJsPath(workspaceRoot: string | undefined, addon: string) {
 
 	if (!workspaceRoot) {
-		return '';
+		return null;
 	}
 
-	return path.join(workspaceRoot, JS_CATALOG, ADDON_CATALOG, addon);
+	return new AddonPath(path.join(workspaceRoot, JS_CATALOG, ADDON_CATALOG, addon), vscode.FileType.Directory);
+}
+
+export async function getTranslatesPath(workspaceRoot: string | undefined, addon: string) {
+
+	if (!workspaceRoot) {
+		return [];
+	}
+
+	const langsPath = path.join(workspaceRoot, VAR_PATH, VAR_LANGS);
+	const addonLangFile = addon.concat(VAR_LANG_FILE_EXTENSION);
+
+	const getLangsNames = (langsPath:string) =>
+		fs.readdirSync(langsPath, { withFileTypes: true })
+		.filter(dirent => dirent.isDirectory())
+		.map(dirent => dirent.name).filter(
+			lang => pathExists(
+				path.join(langsPath, lang, ADDON_CATALOG, addonLangFile)
+			)
+		);
+
+	const langsAddonFiles: AddonPath[] = [];
+
+	getLangsNames(langsPath).forEach(
+		lang => langsAddonFiles.push(
+			new AddonPath(
+				path.join(langsPath, lang, ADDON_CATALOG, addonLangFile),
+				vscode.FileType.Directory
+			)
+		)
+	);
+
+	return langsAddonFiles;
 }
