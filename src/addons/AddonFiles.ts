@@ -20,10 +20,12 @@ const DESIGN_THEME_MANIFEST_FILENAME = 'manifest.json';
 
 const JS_CATALOG = 'js';
 
-const VAR_PATH = 'var';
+const VAR_CATALOG = 'var';
 const VAR_LANGS = 'langs';
 
 const VAR_LANG_FILE_EXTENSION = '.po';
+
+const VAR_THEMES_REPOSITORY_CATALOG = 'themes_repository';
 
 export function getAddonsPath(workspaceRoot: string | undefined) {
 
@@ -72,31 +74,41 @@ export async function getAddonDesignPathes(workspaceRoot: string | undefined, ad
 			)
 	);
 	
-	const designThemesPathes = path.join(designPath, DESIGN_THEMES_CATALOG);
-
-	const getThemeNames = (designPath:string) =>
-		fs.readdirSync(designPath, { withFileTypes: true })
-		.filter(dirent => dirent.isDirectory())
-		.map(dirent => dirent.name).filter(
-			theme => pathExists(
-				path.join(designPath, theme, DESIGN_THEME_MANIFEST_FILENAME)
-			)
-	);
-	
 	const designThemesAddonPathes: AddonPath[] = [];
+	const designThemesPathes = path.join(designPath, DESIGN_THEMES_CATALOG);
+	const themeNames = await getThemeNames(designThemesPathes);
 
-	getThemeNames(designThemesPathes).forEach(
-		themePath => DESIGN_PARTS.map(
-			part => designThemesAddonPathes.push(
-				new AddonPath(
-					path.join(designThemesPathes, themePath, part, ADDON_CATALOG, addon),
-					vscode.FileType.Directory
+	if (themeNames) {
+		themeNames.forEach(
+			themePath => DESIGN_PARTS.map(
+				part => designThemesAddonPathes.push(
+					new AddonPath(
+						path.join(designThemesPathes, themePath, part, ADDON_CATALOG, addon),
+						vscode.FileType.Directory
+					)
 				)
 			)
-		)
-	);
+		);	
+	}
+
+	const repThemesAddonPathes: AddonPath[] = [];
+	const repositoryThemesPathes = path.join(workspaceRoot, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG);
+	const repThemeNames = await getThemeNames(repositoryThemesPathes);
+
+	if (themeNames) {
+		repThemeNames.forEach(
+			themePath => DESIGN_PARTS.map(
+				part => repThemesAddonPathes.push(
+					new AddonPath(
+						path.join(repositoryThemesPathes, themePath, part, ADDON_CATALOG, addon),
+						vscode.FileType.Directory
+					)
+				)
+			)
+		);	
+	}
 	
-	return designBackendPathes.concat(designThemesAddonPathes);
+	return designBackendPathes.concat(designThemesAddonPathes, repThemesAddonPathes);
 }
 
 export async function getAddonJsPath(workspaceRoot: string | undefined, addon: string) {
@@ -114,7 +126,7 @@ export async function getTranslatesPath(workspaceRoot: string | undefined, addon
 		return [];
 	}
 
-	const langsPath = path.join(workspaceRoot, VAR_PATH, VAR_LANGS);
+	const langsPath = path.join(workspaceRoot, VAR_CATALOG, VAR_LANGS);
 	const addonLangFile = addon.concat(VAR_LANG_FILE_EXTENSION);
 
 	const getLangsNames = (langsPath:string) =>
@@ -138,4 +150,15 @@ export async function getTranslatesPath(workspaceRoot: string | undefined, addon
 	);
 
 	return langsAddonFiles;
+}
+
+async function getThemeNames (designPath:string) : Promise<string[]> {
+	return Promise.resolve(fs.readdirSync(designPath, { withFileTypes: true })
+		.filter(dirent => dirent.isDirectory())
+		.map(dirent => dirent.name).filter(
+			theme => pathExists(
+				path.join(designPath, theme)
+			)
+		)
+	);
 }
