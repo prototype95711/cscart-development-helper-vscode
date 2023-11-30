@@ -37,6 +37,10 @@
       {
         "command": "csAddonExplorer.open",
         "title": "Open addon"
+      },
+      {
+        "command": "csAddonExplorer.openFile",
+        "title": "Open File"
       }
     ],
     "menus": {

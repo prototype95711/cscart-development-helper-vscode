@@ -142,6 +142,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	constructor(private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+
+		vscode.commands.registerCommand('addonExplorer.openFile', (resource) => this.openResource(resource));
 	}
 
 	get onDidChangeFile(): vscode.Event<vscode.FileChangeEvent[]> {
@@ -168,7 +170,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		} else {
 			const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 			if (element.type === vscode.FileType.File) {
-				treeItem.command = { command: 'fileExplorer.openFile', title: "Open File", arguments: [element.uri], };
+				treeItem.command = { command: 'addonExplorer.openFile', title: "Open File", arguments: [element.uri], };
 				treeItem.contextValue = 'file';
 			}
 			return treeItem;
@@ -378,6 +380,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			: [];
 
 		return addons;
+	}
+
+	private openResource(resource: vscode.Uri): void {
+		vscode.window.showTextDocument(resource);
 	}
 }
 
