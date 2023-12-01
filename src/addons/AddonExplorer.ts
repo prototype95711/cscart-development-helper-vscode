@@ -143,7 +143,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	constructor(private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
-		vscode.commands.registerCommand('addonExplorer.openFile', (resource) => this.openResource(resource));
+		vscode.commands.registerCommand('csAddonExplorer.openFile', (resource) => this.openResource(resource));
 	}
 
 	get onDidChangeFile(): vscode.Event<vscode.FileChangeEvent[]> {
@@ -169,8 +169,11 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return element;
 		} else {
 			const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+
 			if (element.type === vscode.FileType.File) {
-				treeItem.command = { command: 'addonExplorer.openFile', title: "Open File", arguments: [element.uri], };
+				treeItem.command = { command: 'csAddonExplorer.openFile', title: "Open File", arguments: [element.uri] };
+				//explorer.openAndPassFocus
+				//revealInExplorer
 				treeItem.contextValue = 'file';
 			}
 			return treeItem;
@@ -383,7 +386,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	private openResource(resource: vscode.Uri): void {
-		vscode.window.showTextDocument(resource);
+		vscode.commands.executeCommand('revealInExplorer', resource);
+		vscode.commands.executeCommand('filesExplorer.openFilePreserveFocus', resource);
 	}
 }
 

@@ -11,6 +11,7 @@ export function pathExists(p: AddonPath | string): boolean {
     return true;
 }
 
+
 export class AddonPath {
 
 	constructor(public path: string, public type: vscode.FileType) {
