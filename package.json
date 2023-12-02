@@ -54,7 +54,13 @@
           "command": "csAddonExplorer.open",
           "when": "view == csAddonExplorer"
         }
-      ]
+      ],
+      "view/item/context": [
+				{
+					"command": "csAddonExplorer.openFile",
+					"when": "view == csAddonExplorer && viewItem == file"
+				}
+			]
     },
     "views": {
       "cs-addon-explorer": [
