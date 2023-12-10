@@ -142,8 +142,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	constructor(private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
-
-		vscode.commands.registerCommand('csAddonExplorer.openFile', (resource) => this.openFile(resource));
 	}
 
 	get onDidChangeFile(): vscode.Event<vscode.FileChangeEvent[]> {
@@ -385,18 +383,68 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return addons;
 	}
 
-	private async openFile(resource: vscode.Uri) {
+	public async openFile(resource: vscode.Uri) {
+		const activeTextEditor = vscode.window.activeTextEditor;
+		const previousVisibleRange = activeTextEditor?.visibleRanges[0];
+		const previousURI = activeTextEditor?.document.uri;
+		const previousSelection = activeTextEditor?.selection;
 
-		vscode.workspace.openTextDocument(resource)
-			.then(doc => {
-				vscode.window.showTextDocument(doc);
-			}, err => {
-				vscode.commands.executeCommand('revealInExplorer', resource);
-				vscode.commands.executeCommand('filesExplorer.openFilePreserveFocus', resource);
-			}).then(undefined, err => {
-				vscode.commands.executeCommand('revealInExplorer', resource);
-				vscode.commands.executeCommand('filesExplorer.openFilePreserveFocus', resource);
-			});
+		const opts: vscode.TextDocumentShowOptions = {
+			preserveFocus: false,
+			preview: false,
+			viewColumn: vscode.ViewColumn.Active
+		};
+
+		await vscode.commands.executeCommand('vscode.open', resource, {
+			...opts,
+			override: undefined
+		});
+
+		const document = vscode.window.activeTextEditor?.document;
+
+		if (
+			document?.uri.toString() !== resource.toString() 
+			|| !activeTextEditor 
+			|| !previousURI 
+			|| !previousSelection
+		) {
+			return;
+		}
+
+		if (previousURI.path === resource.path && document) {
+			opts.selection = previousSelection;
+			const editor = await vscode.window.showTextDocument(document, opts);
+
+			if (previousVisibleRange) {
+				editor.revealRange(previousVisibleRange);
+			}
+		}
+	}
+
+	public async openFileToSide(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('explorer.openToSide', resource);
+		} else {
+			await vscode.commands.executeCommand('explorer.openToSide', resource.uri);
+		}
+	}
+
+	public async revealFileInExplorer(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('revealInExplorer', resource);
+		} else {
+			await vscode.commands.executeCommand('revealInExplorer', resource.uri);
+		}
 	}
 }
 

@@ -40,7 +40,15 @@
       },
       {
         "command": "csAddonExplorer.openFile",
-        "title": "Open File"
+        "title": "Open file"
+      },
+      {
+        "command": "csAddonExplorer.openFileToSide",
+        "title": "Open to the Side"
+      },
+      {
+        "command": "csAddonExplorer.revealFileInExplorer",
+        "title": "Reveal in explorer"
       }
     ],
     "menus": {
@@ -56,9 +64,15 @@
         }
       ],
       "view/item/context": [
-				{
-					"command": "csAddonExplorer.openFile",
-					"when": "view == csAddonExplorer && viewItem == file"
+        {
+					"command": "csAddonExplorer.revealFileInExplorer",
+					"when": "view == csAddonExplorer && viewItem == file",
+          "group": "navigation@1"
+				},
+        {
+					"command": "csAddonExplorer.openFileToSide",
+					"when": "view == csAddonExplorer && viewItem == file",
+           "group": "navigation@1"
 				}
 			]
     },

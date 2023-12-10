@@ -7,6 +7,7 @@ import { showAddonPicker } from './addons/AddonPicker';
 
 import * as messages from './addons/AddonMessages';
 
+let disposables: vscode.Disposable[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -19,8 +20,25 @@ export function activate(context: vscode.ExtensionContext) {
 
 		const addonExplorer = new AddonExplorer(addonReader);
 		vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
-		vscode.commands.registerCommand('csAddonExplorer.refreshEntry', () => addonExplorer.refresh());
-		vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(addonReader, addonExplorer, selectAddon));
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csAddonExplorer.refreshEntry', () => addonExplorer.refresh())
+		);
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(addonReader, addonExplorer, selectAddon))
+		);
+
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.openFile', 
+			(resource) => addonExplorer.openFile(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.openFileToSide', 
+			(resource) => addonExplorer.openFileToSide(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.revealFileInExplorer', 
+			(resource) => addonExplorer.revealFileInExplorer(resource)
+		));
 
 	} else {
 		vscode.window.showInformationMessage(messages.NO_ADDONS_IN_WORKSPACE_ERROR);
@@ -44,4 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	if (disposables) {
+		disposables.forEach(item => item.dispose());
+	}
+	disposables = [];
+}
