@@ -49,6 +49,18 @@
       {
         "command": "csAddonExplorer.revealFileInExplorer",
         "title": "Reveal in explorer"
+      },
+      {
+        "command": "csAddonExplorer.revealFileInOS.linux",
+        "title": "%command.revealFileInOS.linux%"
+      },
+      {
+        "command": "csAddonExplorer.revealFileInOS.mac",
+        "title": "%command.revealFileInOS.mac%"
+      },
+      {
+        "command": "csAddonExplorer.revealFileInOS.windows",
+        "title": "%command.revealFileInOS.windows%"
       }
     ],
     "menus": {
@@ -72,8 +84,23 @@
         {
 					"command": "csAddonExplorer.openFileToSide",
 					"when": "view == csAddonExplorer && viewItem == file",
-           "group": "navigation@1"
-				}
+          "group": "navigation@1"
+				},
+        {
+          "command": "csAddonExplorer.revealFileInOS.linux",
+          "when": "view == csAddonExplorer && viewItem == file && isLinux",
+          "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.revealFileInOS.mac",
+          "when": "view == csAddonExplorer && viewItem == file && isMac",
+          "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.revealFileInOS.windows",
+          "when": "view == csAddonExplorer && viewItem == file && isWindows",
+          "group": "navigation@1"
+        }
 			]
     },
     "views": {

@@ -621,6 +621,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			await vscode.commands.executeCommand('revealInExplorer', resource.uri);
 		}
 	}
+
+	public async revealFileInOS(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('revealFileInOS', resource);
+		} else {
+			await vscode.commands.executeCommand('revealFileInOS', resource.uri);
+		}
+	}
 }
 
 export class Addon extends vscode.TreeItem {

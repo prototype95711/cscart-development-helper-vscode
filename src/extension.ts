@@ -45,6 +45,18 @@ export function activate(context: vscode.ExtensionContext) {
 			'csAddonExplorer.revealFileInExplorer', 
 			(resource) => addonExplorer.revealFileInExplorer(resource)
 		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.revealFileInOS.linux', 
+			(resource) => addonExplorer.revealFileInOS(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.revealFileInOS.mac', 
+			(resource) => addonExplorer.revealFileInOS(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.revealFileInOS.windows', 
+			(resource) => addonExplorer.revealFileInOS(resource)
+		));
 
 	} else {
 		vscode.window.showInformationMessage(messages.NO_ADDONS_IN_WORKSPACE_ERROR);
