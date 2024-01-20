@@ -27,6 +27,12 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(addonReader, addonExplorer, selectAddon))
 		);
 
+		const view = vscode.window.createTreeView(
+			'csAddonExplorer', 
+			{ treeDataProvider: addonExplorer, showCollapseAll: true, canSelectMany: true, dragAndDropController: addonExplorer }
+		);
+		context.subscriptions.push(view);
+
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.openFile', 
 			(resource) => addonExplorer.openFile(resource)

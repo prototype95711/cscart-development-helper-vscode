@@ -132,13 +132,18 @@ export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 	addonExplorer.add(addon);
 }
 
-export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>, vscode.FileSystemProvider {
+export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
 	
+	dropMimeTypes = ['application/vnd.code.tree.csAddonExplorer'];
+	dragMimeTypes = ['text/uri-list'];
+	
+	tree: AddonEntry[] = [];
+
 	private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	private _selectedAddons: string[] = [];
 
-	private _onDidChangeTreeData: vscode.EventEmitter<Addon | undefined | void> = new vscode.EventEmitter<Addon | undefined | void>();
-	readonly onDidChangeTreeData: vscode.Event<Addon | undefined | void> = this._onDidChangeTreeData.event;
+	private _onDidChangeTreeData: vscode.EventEmitter<Addon | AddonEntry | undefined | void> = new vscode.EventEmitter<Addon | AddonEntry | undefined | void>();
+	readonly onDidChangeTreeData: vscode.Event<Addon | AddonEntry | undefined | void> = this._onDidChangeTreeData.event;
 
 	constructor(private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -178,6 +183,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
+	public getParent(element: AddonEntry): AddonEntry {
+		return this._getParent(element);
+	}
+
 	async getChildren(element?: Addon | AddonEntry): Promise<Addon[] | AddonEntry[]> {
 
 		if (element) {
@@ -187,7 +196,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				const result: AddonEntry[] = [];
 
 				addonFolders.forEach(_path => {
-					result.push({ uri: vscode.Uri.file(_path.path), type: _path.type, addon: element.label, offset: 0});
+					const entry: AddonEntry = { uri: vscode.Uri.file(_path.path), type: _path.type, addon: element.label, offset: 0};
+					result.push(entry);
+					this.tree.push(entry)
 				});
 
 				return result;
@@ -206,27 +217,35 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						return a[1] === vscode.FileType.Directory ? -1 : 1;
 					});
 
-					return children.map(([name, type]) => 
-						({ 
+					const result: AddonEntry[] = [];
+
+					children.forEach(([name, type]) => {
+						const entry: AddonEntry = { 
 							uri: vscode.Uri.file(path.join(element.uri.fsPath, name)), 
 							type, 
 							addon: element.addon, 
 							offset: offset
-						})
-					);
+						};
+
+						result.push(entry);
+						this.tree.push(entry);
+					});
+
+					return result;
 
 				} else {
 					const result: AddonEntry[] = [];
 
 					addonPathes.forEach(_path => {
-						result.push(
-							{ 
-								uri: vscode.Uri.file(_path.path), 
-								type: _path.type, 
-								addon: element.addon, 
-								offset: offset
-							}
-						);
+						const entry: AddonEntry = { 
+							uri: vscode.Uri.file(_path.path), 
+							type: _path.type, 
+							addon: element.addon, 
+							offset: offset
+						};
+
+						result.push(entry);
+						this.tree.push(entry)
 					});
 
 					return result;
@@ -361,6 +380,162 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 
 		return _.rename(oldUri.fsPath, newUri.fsPath);
+	}
+
+	// Drag and drop controller
+
+	public async handleDrop(target: Addon | AddonEntry | undefined, sources: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+		const transferItem = sources.get('application/vnd.code.tree.csAddonExplorer');
+
+		if (!transferItem) {
+			return;
+		}
+
+		const treeItems: AddonEntry[] = transferItem.value;
+		let roots = this._getLocalRoots(treeItems);
+		// Remove nodes that are already target's parent nodes
+		roots = roots.filter(r => !this._isChild(this._getTreeElement(r.uri.path), target));
+		if (roots.length > 0) {
+			// Reload parents of the moving elements
+			const parents = roots.map(r => this.getParent(r));
+
+			if (target && target !== undefined && !(target instanceof Addon)) {
+				roots.forEach(
+					r => 
+					{
+						var filename = r.uri.path.split('/').pop();
+
+						if (filename !== undefined) {
+							vscode.Uri.file(path.join(target.uri.fsPath, filename));
+						}
+					}
+				);
+			}
+			
+			roots.forEach(r => this._reparentNode(r, target));
+			this._onDidChangeTreeData.fire(...parents, target);
+
+			this.refresh();
+		}
+	}
+
+	public async handleDrag(source: AddonEntry[], treeDataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+		treeDataTransfer.set('application/vnd.code.tree.csAddonExplorer', new vscode.DataTransferItem(source));
+	}
+
+	// Helper methods
+
+	_isChild(node: AddonEntry | Addon, child: AddonEntry | Addon | undefined): boolean {
+		if (!child) {
+			return false;
+		}
+
+		const addon = child instanceof Addon ? child.label : child.addon;
+
+		if (node instanceof Addon) {
+			return node.label === addon;
+		}
+
+		if (!(child instanceof Addon) && child.uri.path.includes(node.uri.path, 0)) {
+			return true;
+		}
+
+		return false;
+	}
+
+	// From the given nodes, filter out all nodes who's parent is already in the the array of Nodes.
+	_getLocalRoots(nodes: AddonEntry[]): AddonEntry[] {
+		const localRoots = [];
+		for (let i = 0; i < nodes.length; i++) {
+			const parent = this.getParent(nodes[i]);
+			if (parent) {
+				const isInList = nodes.find(n => n.uri.path === parent.uri.path);
+				if (isInList === undefined) {
+					localRoots.push(nodes[i]);
+				}
+			} else {
+				localRoots.push(nodes[i]);
+			}
+		}
+		return localRoots;
+	}
+
+	_getParent(element: AddonEntry): any {
+
+		var result: AddonEntry = element;
+		
+		this.tree.forEach(el => {
+			if (
+				el.addon === element.addon 
+				&& element.uri.path !== el.uri.path
+				&& element.uri.path.includes(el.uri.path)
+				&& (result === element || result.uri.path.length < el.uri.path.length)
+			) {
+				result = el;
+			}
+		});
+
+		return result;
+	}
+
+	_getTreeElement(path: string | undefined): any {
+		if (!path) {
+			return null;
+		}
+
+		var result = null;
+		
+		this.tree.forEach(el => {
+			if (
+				el.uri.path === path
+			) {
+				result = el;
+			}
+		});
+
+		return result;
+	}
+
+	_reparentNode(node: AddonEntry, target: Addon | AddonEntry | undefined): void {
+		if (target instanceof Addon) {
+			return;
+		}
+		
+		const element: any = {};
+		element[node.uri.path] = this._getTreeElement(node.uri.path);
+		const elementCopy = { ...element };
+		this._removeNode(node);
+		const targetElement = this._getTreeElement(target?.uri.path);
+		
+		if (Object.keys(element).length === 0) {
+			targetElement[node.uri.path] = {};
+		} else {
+			if (target) {
+
+				if (target !== undefined && !(target instanceof Addon)) {
+
+					var filename = node.uri.path.split('/').pop();
+
+					if (filename !== undefined) {
+						target.uri = vscode.Uri.file(path.join(target.uri.fsPath, filename));
+					}
+				}
+
+				this.rename(node.uri, target?.uri, {overwrite: true});
+			}
+		}
+	}
+
+	_removeNode(element: AddonEntry): void {
+
+		this.tree.forEach((el, key) => {
+			if (
+				el.addon === element.addon 
+				&& el.uri.path.includes(element.uri.path)
+			) {
+				delete this.tree[key];
+			}
+		});
 	}
 
 	private getAddonItem(addon:string): Addon {
