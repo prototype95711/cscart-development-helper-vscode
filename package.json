@@ -43,6 +43,10 @@
         "title": "Open file"
       },
       {
+        "command": "csAddonExplorer.openWith",
+        "title": "Open with..."
+      },
+      {
         "command": "csAddonExplorer.openFileToSide",
         "title": "Open to the Side"
       },
@@ -61,6 +65,18 @@
       {
         "command": "csAddonExplorer.revealFileInOS.windows",
         "title": "%command.revealFileInOS.windows%"
+      },
+      {
+        "command": "csAddonExplorer.cut",
+        "title": "Cut"
+      },
+      {
+        "command": "csAddonExplorer.copy",
+        "title": "Copy"
+      },
+      {
+        "command": "csAddonExplorer.paste",
+        "title": "Paste"
       }
     ],
     "menus": {
@@ -77,15 +93,20 @@
       ],
       "view/item/context": [
         {
-					"command": "csAddonExplorer.revealFileInExplorer",
-					"when": "view == csAddonExplorer && viewItem == file",
+          "command": "csAddonExplorer.revealFileInExplorer",
+          "when": "view == csAddonExplorer && viewItem == file",
           "group": "navigation@1"
-				},
+        },
         {
-					"command": "csAddonExplorer.openFileToSide",
-					"when": "view == csAddonExplorer && viewItem == file",
+          "command": "csAddonExplorer.openWith",
+          "when": "view == csAddonExplorer && viewItem == file",
           "group": "navigation@1"
-				},
+        },
+        {
+          "command": "csAddonExplorer.openFileToSide",
+          "when": "view == csAddonExplorer && viewItem == file",
+          "group": "navigation@1"
+        },
         {
           "command": "csAddonExplorer.revealFileInOS.linux",
           "when": "view == csAddonExplorer && viewItem == file && isLinux",
@@ -100,8 +121,23 @@
           "command": "csAddonExplorer.revealFileInOS.windows",
           "when": "view == csAddonExplorer && viewItem == file && isWindows",
           "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.cut",
+          "when": "view == csAddonExplorer && viewItem == file",
+          "group": "navigation@2"
+        },
+        {
+          "command": "csAddonExplorer.copy",
+          "when": "view == csAddonExplorer && viewItem == file",
+          "group": "navigation@2"
+        },
+        {
+          "command": "csAddonExplorer.paste",
+          "when": "view == csAddonExplorer && viewItem == folder",
+          "group": "navigation@1"
         }
-			]
+      ]
     },
     "views": {
       "cs-addon-explorer": [
@@ -126,8 +162,8 @@
     "@types/mkdirp": "^0.5.2",
     "@types/mocha": "^10.0.3",
     "@types/node": "18.x",
-    "@types/vscode": "^1.84.0",
     "@types/rimraf": "^4.0.5",
+    "@types/vscode": "^1.84.0",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "@vscode/test-electron": "^2.3.6",
@@ -137,6 +173,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@memorize/vscode": "^0.9.1",
     "mkdirp": "^0.5.1",
     "rimraf": "^5.0.5",
     "xml2js": "0.5.0"

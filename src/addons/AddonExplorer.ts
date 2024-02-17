@@ -5,6 +5,13 @@ import * as mkdirp from 'mkdirp';
 import * as rimraf from 'rimraf';
 
 import { AddonReader } from './AddonReader';
+import { File } from 'buffer';
+import { ClipboardService } from '../utility/clipboardService';
+import { IClipboardService } from '../utility/IClipboardService';
+import { isEqual, isEqualOrParent, rtrim } from '../utility/strings';
+import { posix, win32 } from 'path/posix';
+import { ResourceFileEdit } from '../utility/resourceFileEdit';
+import { IProgressCompositeOptions, IProgressNotificationOptions } from '../utility/progress';
 
 const NO_SELECTED_ADDONS_ERROR = 'Not selected addons for work';
 
@@ -133,12 +140,17 @@ export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 }
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
-	
+
 	dropMimeTypes = ['application/vnd.code.tree.csAddonExplorer'];
 	dragMimeTypes = ['text/uri-list'];
 	
 	tree: AddonEntry[] = [];
 
+	private pasteShouldMove = false;
+	private selected: AddonEntry[] = [];
+	private cutItems: AddonEntry[] | undefined;
+
+	private clipboardService: IClipboardService;
 	private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	private _selectedAddons: string[] = [];
 
@@ -147,6 +159,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	constructor(private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+		this.clipboardService = new ClipboardService();
 	}
 
 	get onDidChangeFile(): vscode.Event<vscode.FileChangeEvent[]> {
@@ -172,13 +185,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return element;
 		} else {
 			const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-
+			
 			if (element.type === vscode.FileType.File) {
 				treeItem.command = { command: 'csAddonExplorer.openFile', title: "Open File", arguments: [element.uri] };
-				//explorer.openAndPassFocus
-				//revealInExplorer
 				treeItem.contextValue = 'file';
+			} else if (element.type === vscode.FileType.Directory) {
+				treeItem.contextValue = 'folder';
 			}
+
 			return treeItem;
 		}
 	}
@@ -198,7 +212,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				addonFolders.forEach(_path => {
 					const entry: AddonEntry = { uri: vscode.Uri.file(_path.path), type: _path.type, addon: element.label, offset: 0};
 					result.push(entry);
-					this.tree.push(entry)
+					this.tree.push(entry);
 				});
 
 				return result;
@@ -245,7 +259,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						};
 
 						result.push(entry);
-						this.tree.push(entry)
+						this.tree.push(entry);
 					});
 
 					return result;
@@ -460,15 +474,20 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return localRoots;
 	}
 
-	_getParent(element: AddonEntry): any {
+	_getParent(element: AddonEntry | vscode.Uri): any {
 
-		var result: AddonEntry = element;
+		var result: AddonEntry = element instanceof vscode.Uri
+			? this._getTreeElement(element.path)
+			: element;
+
+		var elementUri = element instanceof vscode.Uri
+			? element
+			: element.uri;
 		
 		this.tree.forEach(el => {
 			if (
-				el.addon === element.addon 
-				&& element.uri.path !== el.uri.path
-				&& element.uri.path.includes(el.uri.path)
+				elementUri.path !== el.uri.path
+				&& elementUri.path.includes(el.uri.path)
 				&& (result === element || result.uri.path.length < el.uri.path.length)
 			) {
 				result = el;
@@ -538,6 +557,21 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		});
 	}
 
+	selectItems(selection: vscode.TreeViewSelectionChangeEvent<AddonEntry | Addon>) {
+		
+		this.selected = [];
+
+		if (selection?.selection.length > 0) {
+			selection.selection.forEach(element => {
+				if (element instanceof Addon) {
+
+				} else {
+					this.selected.push(element);
+				}
+			});
+		}
+	}
+
 	private getAddonItem(addon:string): Addon {
 		const addonData = this.addonReader.getAddonData(addon);
 
@@ -596,6 +630,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
+	public async openWith(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('explorer.openWith', resource);
+		} else {
+			await vscode.commands.executeCommand('explorer.openWith', resource.uri);
+		}
+	}
+
 	public async openFileToSide(resource: AddonEntry | vscode.Uri) {
 
 		if (!resource) {
@@ -611,7 +658,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	public async revealFileInExplorer(resource: AddonEntry | vscode.Uri) {
 
-		if (!resource) {
+		if (!resource) { 
 			return;
 		}
 
@@ -633,6 +680,536 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		} else {
 			await vscode.commands.executeCommand('revealFileInOS', resource.uri);
 		}
+	}
+
+	public async cut(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		this.setToCopy(this.selected, true);
+		this.pasteShouldMove = true;
+
+		/*if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('filesExplorer.cut', resource);
+		} else {
+			await vscode.commands.executeCommand('filesExplorer.cut', resource.uri);
+		}*/
+	}
+
+	public async copy(target: AddonEntry | vscode.Uri) {
+		
+		const toCopy: AddonEntry[] = [];
+		var _selected = this.selected;
+		
+		if (target) {	
+			var itemTarget: AddonEntry;
+
+			if (target instanceof vscode.Uri) {
+				itemTarget = this._getTreeElement(target.path);
+			} else {
+				itemTarget = target;
+			}
+
+			if (itemTarget && toCopy.indexOf(itemTarget) === -1) {
+				toCopy.push(itemTarget);
+			}
+
+			if (_selected.length > 0) {
+				_selected.filter(element => {
+					if (element.uri.path === itemTarget.uri.path 
+						|| isEqualOrParent(element.uri.path, itemTarget.uri.path)
+					) {
+						return false;
+					}
+
+					return true;
+				});
+			}
+		}
+
+		if (this.selected.length > 0) {
+			this.selected.map(selected => function () {
+				toCopy.push(selected);
+			});
+		}
+
+		this.setToCopy(toCopy, false);
+		this.pasteShouldMove = false;
+
+		/*if (target instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('filesExplorer.copy');
+		} else {
+			await vscode.commands.executeCommand('filesExplorer.copy');
+		}*/
+	}
+
+	async setToCopy(items: AddonEntry[], cut: boolean): Promise<void> {
+		const previouslyCutItems = this.cutItems;
+		this.cutItems = cut ? items : undefined;
+		await this.clipboardService.writeResources(items.map(s => s.uri));
+
+		//this.view?.itemsCopied(items, cut, previouslyCutItems);
+	}
+
+	async getFilesToPaste(): Promise<readonly vscode.Uri[]> {
+		return this.distinctParents(await this.clipboardService.readResources(), resource => resource);
+	}
+
+	private distinctParents<T>(items: T[], resourceAccessor: (item: T) => vscode.Uri): T[] {
+		const distinctParents: T[] = [];
+		for (let i = 0; i < items.length; i++) {
+			const candidateResource = resourceAccessor(items[i]);
+			if (items.some((otherItem, index) => {
+				if (index === i) {
+					return false;
+				}
+	
+				return isEqualOrParent(candidateResource.toString(), resourceAccessor(otherItem).toString());
+			})) {
+				continue;
+			}
+	
+			distinctParents.push(items[i]);
+		}
+	
+		return distinctParents;
+	}
+
+	public coalesce<T>(array: ReadonlyArray<T | undefined | null>): T[] {
+		return <T[]>array.filter(e => !!e);
+	}
+
+	public async paste(element: AddonEntry | vscode.Uri) {
+
+		const incrementalNaming = "disabled";
+
+		const toPaste = await this.getFilesToPaste();
+		const elementUri = element instanceof vscode.Uri ? element : element.uri;
+
+		try {
+			// Check if target is ancestor of pasted folder
+			
+			const sourceTargetPairs = this.coalesce(await Promise.all(toPaste.map(async fileToPaste => {
+	
+				if (
+					elementUri.path !== fileToPaste.path
+					&& isEqualOrParent(elementUri.path, fileToPaste.path)
+				) {
+					throw new Error("File to paste is an ancestor of the destination folder");
+				}
+				const fileToPasteStat = await _.stat(fileToPaste.path);
+	
+				// Find target
+				let target: AddonEntry;
+
+				const elementObj = element instanceof vscode.Uri ?
+					this._getTreeElement(element.path)
+					: element;
+
+				if (elementUri === fileToPaste) {
+					target = this._getParent(elementUri);
+				} else {
+					target = elementObj?.type === vscode.FileType.Directory 
+						? elementObj
+						: this._getParent(elementUri);
+				}
+	
+				const targetFile = await this.findValidPasteFileTarget(
+					target,
+					{ 
+						resource: fileToPaste, 
+						isDirectory: fileToPasteStat.isDirectory(), 
+						allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
+					},
+					incrementalNaming
+				);
+	
+				if (!targetFile) {
+					return undefined;
+				}
+	
+				return { source: fileToPaste, target: targetFile };
+			})));
+	
+			if (sourceTargetPairs.length >= 1) {
+				// Move/Copy File
+				if (this.pasteShouldMove) {
+					sourceTargetPairs.map(s => this.moveFileByAction(s));
+					
+					/*const resourceFileEdits = sourceTargetPairs.map(pair => new ResourceFileEdit(
+						pair.source, 
+						pair.target, 
+						{ overwrite: incrementalNaming === 'disabled' }
+						)
+					);
+					
+					const options = {
+						confirmBeforeUndo: true, //verbose mode
+						progressLabel: sourceTargetPairs.length > 1 ? vscode.l10n.t("Moving {0} files", sourceTargetPairs.length)
+							: vscode.l10n.t("Moving {0}", path.basename(sourceTargetPairs[0].target.path) || sourceTargetPairs[0].target.authority),
+						undoLabel: sourceTargetPairs.length > 1 ? vscode.l10n.t("Move {0} files", sourceTargetPairs.length)
+							: vscode.l10n.t("Move {0}", path.basename(sourceTargetPairs[0].target.path) || sourceTargetPairs[0].target.authority)
+					};
+					await this.applyBulkEdit(resourceFileEdits, options);*/
+				} else {
+					sourceTargetPairs.map(s => this.duplicateFileByAction(s));
+					/*const resourceFileEdits = sourceTargetPairs.map(pair => new ResourceFileEdit(pair.source, pair.target, { copy: true, overwrite: incrementalNaming === 'disabled' }));
+					const undoLevel = configurationService.getValue<IFilesConfiguration>().explorer.confirmUndo;
+					const options = {
+						confirmBeforeUndo: undoLevel === UndoConfirmLevel.Default || undoLevel === UndoConfirmLevel.Verbose,
+						progressLabel: sourceTargetPairs.length > 1 ? nls.localize({ key: 'copyingBulkEdit', comment: ['Placeholder will be replaced by the number of files being copied'] }, "Copying {0} files", sourceTargetPairs.length)
+							: nls.localize({ key: 'copyingFileBulkEdit', comment: ['Placeholder will be replaced by the name of the file copied.'] }, "Copying {0}", resources.basenameOrAuthority(sourceTargetPairs[0].target)),
+						undoLabel: sourceTargetPairs.length > 1 ? nls.localize({ key: 'copyBulkEdit', comment: ['Placeholder will be replaced by the number of files being copied'] }, "Paste {0} files", sourceTargetPairs.length)
+							: nls.localize({ key: 'copyFileBulkEdit', comment: ['Placeholder will be replaced by the name of the file copied.'] }, "Paste {0}", resources.basenameOrAuthority(sourceTargetPairs[0].target))
+					};
+					await explorerService.applyBulkEdit(resourceFileEdits, options);*/
+				}
+	
+				const pair = sourceTargetPairs[0];
+				const target_el = this._getTreeElement(pair.target.path);
+
+				//await this.selectItems([target_el]);
+
+				if (sourceTargetPairs.length === 1) {
+					const item = this.findClosest(pair.target);
+
+					if (item && item.type !== vscode.FileType.Directory) {
+						//await editorService.openEditor({ resource: item.resource, options: { pinned: true, preserveFocus: true } });
+					}
+				}
+			}
+		} catch (e) {
+			console.log(e);
+			//onError(notificationService, new Error(nls.localize('fileDeleted', "The file(s) to paste have been deleted or moved since you copied them. {0}", getErrorMessage(e))));
+		} finally {
+			/*if (pasteShouldMove) {
+				// Cut is done. Make sure to clear cut state.
+				await explorerService.setToCopy([], false);
+				pasteShouldMove = false;
+			}*/
+		}
+	}
+
+	async moveFileByAction(action: any) {
+		let item = this._getTreeElement(action.source);
+		let roots = this._getLocalRoots(item);
+
+		// Remove nodes that are already target's parent nodes
+		roots = roots.filter(r => !this._isChild(this._getTreeElement(r.uri.path), action.target));
+
+		if (roots.length > 0) {
+			// Reload parents of the moving elements
+			const parents = roots.map(r => this.getParent(r));
+
+			if (action.target && action.target !== undefined && (action.target instanceof vscode.Uri)) {
+				roots.forEach(
+					r => 
+					{
+						var filename = r.uri.path.split('/').pop();
+
+						if (filename !== undefined) {
+							vscode.Uri.file(path.join(action.target.fsPath, filename));
+						}
+					}
+				);
+			}
+
+			var target_el = this._getTreeElement(action.target);
+			
+			roots.forEach(r => this._reparentNode(r, target_el));
+			this._onDidChangeTreeData.fire(...parents, target_el);
+
+			this.refresh();
+		}
+	}
+
+	async duplicateFileByAction(action: any) {
+		let item = this._getTreeElement(action.source.path);
+
+		if (!item) {
+			return;
+		}
+		
+		let roots = this._getLocalRoots([item]);
+
+		// Remove nodes that are already target's parent nodes
+		roots = roots.filter(r => !this._isChild(this._getTreeElement(r.uri.path), this._getTreeElement(action.target.path)));
+
+		if (roots.length > 0) {
+			// Reload parents of the moving elements
+			const parents = roots.map(r => this.getParent(r));
+
+			if (action.target && action.target !== undefined && (action.target instanceof vscode.Uri)) {
+				roots.forEach(
+					r => 
+					{
+						var filename = r.uri.path.split('/').pop();
+
+						if (filename !== undefined) {
+							vscode.Uri.file(path.join(action.target.fsPath, filename));
+						}
+					}
+				);
+			}
+			
+			roots.map(r => this._duplicateFile(r, action.target));
+
+			var target_el = this._getTreeElement(action.target.path);
+
+			this._onDidChangeTreeData.fire(...parents, target_el);
+
+			this.refresh();
+		}
+	}
+
+	async _duplicateFile(element: AddonEntry, target: vscode.Uri) {
+		var buf = await _.readfile(element.uri.path);
+		var result = await _.writefile(target.path, buf);
+
+		console.log(result);
+	}
+
+	async applyBulkEdit(edit: ResourceFileEdit[], options: { undoLabel: string; progressLabel: string; confirmBeforeUndo?: boolean; progressLocation?: vscode.ProgressLocation.Window }): Promise<void> {
+		/*const cancellationTokenSource = new vscode.CancellationTokenSource();
+		const promise = vscode.window.withProgress(<IProgressNotificationOptions | IProgressCompositeOptions>{
+			location: options.progressLocation || vscode.ProgressLocation.Window,
+			title: options.progressLabel,
+			cancellable: edit.length > 1, // Only allow cancellation when there is more than one edit. Since cancelling will not actually stop the current edit that is in progress.
+			delay: 500,
+		}, async progress => {
+			await this.bulkEditService.apply(edit, {
+				undoRedoSource: UNDO_REDO_SOURCE,
+				label: options.undoLabel,
+				code: 'undoredo.explorerOperation',
+				progress,
+				token: cancellationTokenSource.token,
+				confirmBeforeUndo: options.confirmBeforeUndo
+			});
+		}, () => cancellationTokenSource.cancel());
+		await this.progressService.withProgress({ location: ProgressLocation.Explorer, delay: 500 }, () => promise);
+		cancellationTokenSource.dispose();*/
+	}
+
+	async findValidPasteFileTarget(
+		targetFolder: AddonEntry,
+		fileToPaste: { resource: vscode.Uri; isDirectory?: boolean; allowOverwrite: boolean },
+		incrementalNaming: 'simple' | 'smart' | 'disabled'
+	): Promise<vscode.Uri | undefined> {
+	
+		let name = path.basename(fileToPaste.resource.path) || fileToPaste.resource.authority;
+		let candidate = vscode.Uri.joinPath(targetFolder.uri, name);
+	
+		// In the disabled case we must ask if it's ok to overwrite the file if it exists
+		if (incrementalNaming === 'disabled') {
+			const canOverwrite = await this.askForOverwrite(candidate);
+
+			if (!canOverwrite) {
+				return;
+			}
+		}
+	
+		while (true && !fileToPaste.allowOverwrite) {
+			if (!this.findClosest(candidate)) {
+				break;
+			}
+	
+			if (incrementalNaming !== 'disabled') {
+				name = this.incrementFileName(name, !fileToPaste.isDirectory, incrementalNaming);
+			}
+			candidate = vscode.Uri.joinPath(targetFolder.uri, name);
+		}
+	
+		return candidate;
+	}
+
+	findClosest(resource: vscode.Uri): AddonEntry | null {
+		const folder = vscode.workspace.getWorkspaceFolder(resource);
+
+		if (folder) {
+			const root = this.tree.find(r => r.uri === folder.uri);
+
+			if (root) {
+				return this.findByPath(resource.path, resource.path.length, true);
+			}
+		}
+
+		return null;
+	}
+
+	incrementFileName(name: string, isFolder: boolean, incrementalNaming: 'simple' | 'smart'): string {
+		if (incrementalNaming === 'simple') {
+			let namePrefix = name;
+			let extSuffix = '';
+			if (!isFolder) {
+				extSuffix = path.extname(name);
+				namePrefix = path.basename(name, extSuffix);
+			}
+	
+			// name copy 5(.txt) => name copy 6(.txt)
+			// name copy(.txt) => name copy 2(.txt)
+			const suffixRegex = /^(.+ copy)( \d+)?$/;
+			if (suffixRegex.test(namePrefix)) {
+				return namePrefix.replace(suffixRegex, (match, g1?, g2?) => {
+					const number = (g2 ? parseInt(g2) : 1);
+					return number === 0
+						? `${g1}`
+						: (number < 1 << 30
+							? `${g1} ${number + 1}`
+							: `${g1}${g2} copy`);
+				}) + extSuffix;
+			}
+	
+			// name(.txt) => name copy(.txt)
+			return `${namePrefix} copy${extSuffix}`;
+		}
+	
+		const separators = '[\\.\\-_]';
+		const maxNumber = 1 << 30;
+	
+		// file.1.txt=>file.2.txt
+		const suffixFileRegex = RegExp('(.*' + separators + ')(\\d+)(\\..*)$');
+		if (!isFolder && name.match(suffixFileRegex)) {
+			return name.replace(suffixFileRegex, (match, g1?, g2?, g3?) => {
+				const number = parseInt(g2);
+				return number < maxNumber
+					? g1 + String(number + 1).padStart(g2.length, '0') + g3
+					: `${g1}${g2}.1${g3}`;
+			});
+		}
+	
+		// 1.file.txt=>2.file.txt
+		const prefixFileRegex = RegExp('(\\d+)(' + separators + '.*)(\\..*)$');
+		if (!isFolder && name.match(prefixFileRegex)) {
+			return name.replace(prefixFileRegex, (match, g1?, g2?, g3?) => {
+				const number = parseInt(g1);
+				return number < maxNumber
+					? String(number + 1).padStart(g1.length, '0') + g2 + g3
+					: `${g1}${g2}.1${g3}`;
+			});
+		}
+	
+		// 1.txt=>2.txt
+		const prefixFileNoNameRegex = RegExp('(\\d+)(\\..*)$');
+		if (!isFolder && name.match(prefixFileNoNameRegex)) {
+			return name.replace(prefixFileNoNameRegex, (match, g1?, g2?) => {
+				const number = parseInt(g1);
+				return number < maxNumber
+					? String(number + 1).padStart(g1.length, '0') + g2
+					: `${g1}.1${g2}`;
+			});
+		}
+	
+		// file.txt=>file.1.txt
+		const lastIndexOfDot = name.lastIndexOf('.');
+		if (!isFolder && lastIndexOfDot >= 0) {
+			return `${name.substr(0, lastIndexOfDot)}.1${name.substr(lastIndexOfDot)}`;
+		}
+	
+		// 123 => 124
+		const noNameNoExtensionRegex = RegExp('(\\d+)$');
+		if (!isFolder && lastIndexOfDot === -1 && name.match(noNameNoExtensionRegex)) {
+			return name.replace(noNameNoExtensionRegex, (match, g1?) => {
+				const number = parseInt(g1);
+				return number < maxNumber
+					? String(number + 1).padStart(g1.length, '0')
+					: `${g1}.1`;
+			});
+		}
+	
+		// file => file1
+		// file1 => file2
+		const noExtensionRegex = RegExp('(.*)(\\d*)$');
+		if (!isFolder && lastIndexOfDot === -1 && name.match(noExtensionRegex)) {
+			return name.replace(noExtensionRegex, (match, g1?, g2?) => {
+				let number = parseInt(g2);
+				if (isNaN(number)) {
+					number = 0;
+				}
+				return number < maxNumber
+					? g1 + String(number + 1).padStart(g2.length, '0')
+					: `${g1}${g2}.1`;
+			});
+		}
+	
+		// folder.1=>folder.2
+		if (isFolder && name.match(/(\d+)$/)) {
+			return name.replace(/(\d+)$/, (match, ...groups) => {
+				const number = parseInt(groups[0]);
+				return number < maxNumber
+					? String(number + 1).padStart(groups[0].length, '0')
+					: `${groups[0]}.1`;
+			});
+		}
+	
+		// 1.folder=>2.folder
+		if (isFolder && name.match(/^(\d+)/)) {
+			return name.replace(/^(\d+)(.*)$/, (match, ...groups) => {
+				const number = parseInt(groups[0]);
+				return number < maxNumber
+					? String(number + 1).padStart(groups[0].length, '0') + groups[1]
+					: `${groups[0]}${groups[1]}.1`;
+			});
+		}
+	
+		// file/folder=>file.1/folder.1
+		return `${name}.1`;
+	}
+
+	private findByPath(path: string, index: number, ignoreCase: boolean): AddonEntry | null {
+		if (isEqual(rtrim(path, posix.sep), path, ignoreCase)) {
+			return this._getTreeElement(path);
+		}
+
+		// Ignore separtor to more easily deduct the next name to search
+		while (index < path.length && path[index] === posix.sep) {
+			index++;
+		}
+
+		let indexOfNextSep = path.indexOf(posix.sep, index);
+		if (indexOfNextSep === -1) {
+			// If there is no separator take the remainder of the path
+			indexOfNextSep = path.length;
+		}
+		// The name to search is between two separators
+		const name = path.substring(index, indexOfNextSep);
+
+		const child = this.getChildren(this._getTreeElement(name));
+
+		/*if (child) {
+			// We found a child with the given name, search inside it
+			return this.findByPath(path, indexOfNextSep, ignoreCase);
+		}*/
+
+		return null;
+	}
+
+	async askForOverwrite(targetResource: vscode.Uri): Promise<boolean> {
+		const exists = await _.exists(targetResource.fsPath);
+
+		if (!exists) {
+			return true;
+		}
+
+		// Ask for overwrite confirmation
+		const dialogTitle = vscode.l10n.t(
+			"A file or folder with the name '{0}' already exists in the destination folder. Do you want to replace it?", 
+			path.basename(targetResource.path)
+		);
+		let confirmed = false;
+
+		await vscode.window.showInformationMessage(
+			dialogTitle,
+			vscode.l10n.t("Replace"),
+			vscode.l10n.t("No")
+		).then(answer => {
+			if (answer === vscode.l10n.t("Replace")) {
+				confirmed = true;
+			}
+		});
+
+		return confirmed;
 	}
 }
 
@@ -656,6 +1233,10 @@ export class Addon extends vscode.TreeItem {
 	};
 
 	contextValue = 'addon';
+}
+
+interface FileList {
+    [Symbol.iterator](): IterableIterator<File>;
 }
 
 export class FileStat implements vscode.FileStat {

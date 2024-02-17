@@ -24,13 +24,25 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.commands.registerCommand('csAddonExplorer.refreshEntry', () => addonExplorer.refresh())
 		);
 		context.subscriptions.push(
-			vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(addonReader, addonExplorer, selectAddon))
+			vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(
+				addonReader, 
+				addonExplorer, 
+				selectAddon
+			))
 		);
 
 		const view = vscode.window.createTreeView(
 			'csAddonExplorer', 
-			{ treeDataProvider: addonExplorer, showCollapseAll: true, canSelectMany: true, dragAndDropController: addonExplorer }
+			{ 
+				treeDataProvider: addonExplorer, 
+				showCollapseAll: true, 
+				canSelectMany: true, 
+				dragAndDropController: addonExplorer
+			}
 		);
+		view.onDidChangeSelection(selection => {
+			addonExplorer.selectItems(selection);
+		});
 		context.subscriptions.push(view);
 
 		context.subscriptions.push(vscode.commands.registerCommand(
@@ -56,6 +68,18 @@ export function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.revealFileInOS.windows', 
 			(resource) => addonExplorer.revealFileInOS(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.cut', 
+			(resource) => addonExplorer.cut(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.copy', 
+			(resource) => addonExplorer.copy(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.paste', 
+			(resource) => addonExplorer.paste(resource)
 		));
 
 	} else {
