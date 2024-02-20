@@ -700,10 +700,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	public async copy(target: AddonEntry | vscode.Uri) {
 		
-		const toCopy: AddonEntry[] = [];
+		var toCopy: AddonEntry[] = [];
 		var _selected = this.selected;
 		
-		if (target) {	
+		if (target && _selected.length <= 1) {	
 			var itemTarget: AddonEntry;
 
 			if (target instanceof vscode.Uri) {
@@ -716,7 +716,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				toCopy.push(itemTarget);
 			}
 
-			if (_selected.length > 0) {
+			if (_selected.length === 1) {
 				_selected.filter(element => {
 					if (element.uri.path === itemTarget.uri.path 
 						|| isEqualOrParent(element.uri.path, itemTarget.uri.path)
@@ -727,12 +727,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					return true;
 				});
 			}
-		}
 
-		if (this.selected.length > 0) {
-			this.selected.map(selected => function () {
-				toCopy.push(selected);
-			});
+		} else if (_selected.length > 0) {
+			toCopy = _selected;
 		}
 
 		this.setToCopy(toCopy, false);
@@ -868,12 +865,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				}
 	
 				const pair = sourceTargetPairs[0];
-				const target_el = this._getTreeElement(pair.target.path);
+				//const target_el = this._getTreeElement(pair.target.path);
 
 				//await this.selectItems([target_el]);
 
 				if (sourceTargetPairs.length === 1) {
-					const item = this.findClosest(pair.target);
+					const item = await this.findClosest(pair.target);
 
 					if (item && item.type !== vscode.FileType.Directory) {
 						//await editorService.openEditor({ resource: item.resource, options: { pinned: true, preserveFocus: true } });
@@ -893,11 +890,26 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async moveFileByAction(action: any) {
-		let item = this._getTreeElement(action.source);
-		let roots = this._getLocalRoots(item);
+		let items = [];
+		let item = this._getTreeElement(action.source.path);
+
+		if (!item) {
+			return;
+		} else if (item.type === vscode.FileType.Directory) {
+			items = await this.getChildren(item);
+		} else {
+			items.push(item);
+		}
+
+		let roots = this._getLocalRoots(items);
 
 		// Remove nodes that are already target's parent nodes
-		roots = roots.filter(r => !this._isChild(this._getTreeElement(r.uri.path), action.target));
+		roots = roots.filter(
+			r => !this._isChild(
+				this._getTreeElement(r.uri.path), 
+				action.target.path
+			)
+		);
 
 		if (roots.length > 0) {
 			// Reload parents of the moving elements
@@ -926,20 +938,31 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async duplicateFileByAction(action: any) {
+		let items = [];
 		let item = this._getTreeElement(action.source.path);
 
 		if (!item) {
 			return;
+		} else if (item.type === vscode.FileType.Directory) {
+			items = await this.getChildren(item);
+		} else {
+			items.push(item);
 		}
-		
-		let roots = this._getLocalRoots([item]);
+
+		let roots = this._getLocalRoots(items);
 
 		// Remove nodes that are already target's parent nodes
-		roots = roots.filter(r => !this._isChild(this._getTreeElement(r.uri.path), this._getTreeElement(action.target.path)));
+		roots = roots.filter(
+			r => !this._isChild(
+				this._getTreeElement(r.uri.path), 
+				this._getTreeElement(action.target.path)
+			)
+		);
 
 		if (roots.length > 0) {
 			// Reload parents of the moving elements
 			const parents = roots.map(r => this.getParent(r));
+			const latestPartOfTarget = action.target.path.split('/').pop();
 
 			if (action.target && action.target !== undefined && (action.target instanceof vscode.Uri)) {
 				roots.forEach(
@@ -948,27 +971,30 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						var filename = r.uri.path.split('/').pop();
 
 						if (filename !== undefined) {
-							vscode.Uri.file(path.join(action.target.fsPath, filename));
+							var target_uri = latestPartOfTarget === filename
+								? vscode.Uri.file(action.target.fsPath)
+								: vscode.Uri.file(path.join(action.target.fsPath, filename));
+							
+							this._duplicateFile(r, target_uri);
+							this._onDidChangeTreeData.fire(...parents, target_uri);
 						}
 					}
 				);
 			}
-			
-			roots.map(r => this._duplicateFile(r, action.target));
-
-			var target_el = this._getTreeElement(action.target.path);
-
-			this._onDidChangeTreeData.fire(...parents, target_el);
 
 			this.refresh();
 		}
 	}
 
 	async _duplicateFile(element: AddonEntry, target: vscode.Uri) {
-		var buf = await _.readfile(element.uri.path);
-		var result = await _.writefile(target.path, buf);
+		const stat = await this._stat(element.uri.path);
 
-		console.log(result);
+		if (stat.type === vscode.FileType.Directory) {
+			await _.mkdir(path.dirname(target.fsPath));
+		} else {
+			var buf = await this.readFile(element.uri);
+			await this.writeFile(target, buf, {create:true, overwrite:true});
+		}
 	}
 
 	async applyBulkEdit(edit: ResourceFileEdit[], options: { undoLabel: string; progressLabel: string; confirmBeforeUndo?: boolean; progressLocation?: vscode.ProgressLocation.Window }): Promise<void> {
@@ -1024,14 +1050,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return candidate;
 	}
 
-	findClosest(resource: vscode.Uri): AddonEntry | null {
+	async findClosest(resource: vscode.Uri): Promise<AddonEntry | null> {
 		const folder = vscode.workspace.getWorkspaceFolder(resource);
 
 		if (folder) {
 			const root = this.tree.find(r => r.uri === folder.uri);
 
 			if (root) {
-				return this.findByPath(resource.path, resource.path.length, true);
+				return await this.findByPath(resource.path, resource.path.length, true);
 			}
 		}
 
@@ -1157,7 +1183,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return `${name}.1`;
 	}
 
-	private findByPath(path: string, index: number, ignoreCase: boolean): AddonEntry | null {
+	private async findByPath(path: string, index: number, ignoreCase: boolean): Promise<AddonEntry | null> {
 		if (isEqual(rtrim(path, posix.sep), path, ignoreCase)) {
 			return this._getTreeElement(path);
 		}
@@ -1175,12 +1201,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		// The name to search is between two separators
 		const name = path.substring(index, indexOfNextSep);
 
-		const child = this.getChildren(this._getTreeElement(name));
+		const childs = await this.getChildren(this._getTreeElement(name));
 
-		/*if (child) {
+		if (childs.length > 0) {
 			// We found a child with the given name, search inside it
 			return this.findByPath(path, indexOfNextSep, ignoreCase);
-		}*/
+		}
 
 		return null;
 	}

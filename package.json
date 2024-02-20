@@ -124,12 +124,12 @@
         },
         {
           "command": "csAddonExplorer.cut",
-          "when": "view == csAddonExplorer && viewItem == file",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
           "group": "navigation@2"
         },
         {
           "command": "csAddonExplorer.copy",
-          "when": "view == csAddonExplorer && viewItem == file",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
           "group": "navigation@2"
         },
         {
