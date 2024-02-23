@@ -502,7 +502,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return null;
 		}
 
-		var result = null;
+		var result = undefined;
 		
 		this.tree.forEach(el => {
 			if (
@@ -525,22 +525,23 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		const elementCopy = { ...element };
 		this._removeNode(node);
 		const targetElement = this._getTreeElement(target?.uri.path);
+		var target_uri = target?.uri;
 		
 		if (Object.keys(element).length === 0) {
 			targetElement[node.uri.path] = {};
 		} else {
-			if (target) {
+			if (target_uri) {
 
 				if (target !== undefined && !(target instanceof Addon)) {
 
 					var filename = node.uri.path.split('/').pop();
 
 					if (filename !== undefined) {
-						target.uri = vscode.Uri.file(path.join(target.uri.fsPath, filename));
+						target_uri = vscode.Uri.file(path.join(target_uri.fsPath, filename));
 					}
 				}
 
-				this.rename(node.uri, target?.uri, {overwrite: true});
+				this.rename(node.uri, target_uri, {overwrite: true});
 			}
 		}
 	}
@@ -682,13 +683,41 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
-	public async cut(resource: AddonEntry | vscode.Uri) {
+	public async cut(target: AddonEntry | vscode.Uri) {
+		
+		var toCut: AddonEntry[] = [];
+		var _selected = this.selected;
+		
+		if (target && _selected.length <= 1) {	
+			var itemTarget: AddonEntry;
 
-		if (!resource) {
-			return;
+			if (target instanceof vscode.Uri) {
+				itemTarget = this._getTreeElement(target.path);
+			} else {
+				itemTarget = target;
+			}
+
+			if (itemTarget && toCut.indexOf(itemTarget) === -1) {
+				toCut.push(itemTarget);
+			}
+
+			if (_selected.length === 1) {
+				_selected.filter(element => {
+					if (element.uri.path === itemTarget.uri.path 
+						|| isEqualOrParent(element.uri.path, itemTarget.uri.path)
+					) {
+						return false;
+					}
+
+					return true;
+				});
+			}
+
+		} else if (_selected.length > 0) {
+			toCut = _selected;
 		}
 
-		this.setToCopy(this.selected, true);
+		this.setToCopy(toCut, true);
 		this.pasteShouldMove = true;
 
 		/*if (resource instanceof vscode.Uri) {
@@ -799,7 +828,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				const fileToPasteStat = await _.stat(fileToPaste.path);
 	
 				// Find target
-				let target: AddonEntry;
+				var target: AddonEntry;
 
 				const elementObj = element instanceof vscode.Uri ?
 					this._getTreeElement(element.path)
@@ -827,7 +856,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					return undefined;
 				}
 	
-				return { source: fileToPaste, target: targetFile };
+				return { source: fileToPaste, target: targetFile, target_element: target};
 			})));
 	
 			if (sourceTargetPairs.length >= 1) {
@@ -881,6 +910,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			console.log(e);
 			//onError(notificationService, new Error(nls.localize('fileDeleted', "The file(s) to paste have been deleted or moved since you copied them. {0}", getErrorMessage(e))));
 		} finally {
+			this.refresh();
 			/*if (pasteShouldMove) {
 				// Cut is done. Make sure to clear cut state.
 				await explorerService.setToCopy([], false);
@@ -890,13 +920,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async moveFileByAction(action: any) {
-		let items = [];
-		let item = this._getTreeElement(action.source.path);
+		var items = [];
+		var item = this._getTreeElement(action.source.path);
 
 		if (!item) {
 			return;
 		} else if (item.type === vscode.FileType.Directory) {
-			items = await this.getChildren(item);
+			items.push(item);
+			items.concat(await this.getChildren(item));
 		} else {
 			items.push(item);
 		}
@@ -907,13 +938,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		roots = roots.filter(
 			r => !this._isChild(
 				this._getTreeElement(r.uri.path), 
-				action.target.path
+				this._getTreeElement(action.target.path)
 			)
 		);
 
 		if (roots.length > 0) {
 			// Reload parents of the moving elements
 			const parents = roots.map(r => this.getParent(r));
+			const latestPartOfTarget = action.target.path.split('/').pop();
 
 			if (action.target && action.target !== undefined && (action.target instanceof vscode.Uri)) {
 				roots.forEach(
@@ -922,18 +954,18 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						var filename = r.uri.path.split('/').pop();
 
 						if (filename !== undefined) {
-							vscode.Uri.file(path.join(action.target.fsPath, filename));
+							var target_uri = latestPartOfTarget === filename
+								? vscode.Uri.file(action.target.fsPath)
+								: vscode.Uri.file(path.join(action.target.fsPath, filename));
+
+							const target = action.target_element;
+
+							this._reparentNode(r, target);
+							this._onDidChangeTreeData.fire(...parents, target_uri);
 						}
 					}
 				);
 			}
-
-			var target_el = this._getTreeElement(action.target);
-			
-			roots.forEach(r => this._reparentNode(r, target_el));
-			this._onDidChangeTreeData.fire(...parents, target_el);
-
-			this.refresh();
 		}
 	}
 
@@ -981,8 +1013,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					}
 				);
 			}
-
-			this.refresh();
 		}
 	}
 
@@ -1053,8 +1083,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	async findClosest(resource: vscode.Uri): Promise<AddonEntry | null> {
 		const folder = vscode.workspace.getWorkspaceFolder(resource);
 
-		if (folder) {
-			const root = this.tree.find(r => r.uri === folder.uri);
+		if (folder && folder?.uri) {
+			const root = this.tree.find(r => r?.uri === folder.uri);
 
 			if (root) {
 				return await this.findByPath(resource.path, resource.path.length, true);
