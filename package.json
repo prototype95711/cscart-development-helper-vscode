@@ -134,7 +134,7 @@
         },
         {
           "command": "csAddonExplorer.paste",
-          "when": "view == csAddonExplorer && viewItem == folder",
+          "when": "view == csAddonExplorer && viewItem == folder && addonExplorer.hasFilesToPaste",
           "group": "navigation@1"
         }
       ]

@@ -141,6 +141,8 @@ export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
 
+	private _hasFilesToPaste: ContextKey;
+
 	dropMimeTypes = ['application/vnd.code.tree.csAddonExplorer'];
 	dragMimeTypes = ['text/uri-list'];
 	
@@ -158,6 +160,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	readonly onDidChangeTreeData: vscode.Event<Addon | AddonEntry | undefined | void> = this._onDidChangeTreeData.event;
 
 	constructor(private addonReader: AddonReader) {
+		this._hasFilesToPaste = new ContextKey('addonExplorer.hasFilesToPaste');
+
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 		this.clipboardService = new ClipboardService();
 	}
@@ -184,7 +188,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (element instanceof Addon) {
 			return element;
 		} else {
-			const treeItem = new vscode.TreeItem(element.uri, element.type === vscode.FileType.Directory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+			const treeItem = new vscode.TreeItem(
+				element.uri, 
+				element.type === vscode.FileType.Directory 
+					? vscode.TreeItemCollapsibleState.Collapsed 
+					: vscode.TreeItemCollapsibleState.None
+			);
 			
 			if (element.type === vscode.FileType.File) {
 				treeItem.command = { command: 'csAddonExplorer.openFile', title: "Open File", arguments: [element.uri] };
@@ -772,9 +781,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async setToCopy(items: AddonEntry[], cut: boolean): Promise<void> {
-		const previouslyCutItems = this.cutItems;
 		this.cutItems = cut ? items : undefined;
 		await this.clipboardService.writeResources(items.map(s => s.uri));
+
+		this._hasFilesToPaste.set(items.length > 0);
 
 		//this.view?.itemsCopied(items, cut, previouslyCutItems);
 	}
@@ -911,6 +921,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			//onError(notificationService, new Error(nls.localize('fileDeleted', "The file(s) to paste have been deleted or moved since you copied them. {0}", getErrorMessage(e))));
 		} finally {
 			this.refresh();
+			this.cutItems = [];
+			this.clipboardService.writeResources([]);
+			this._hasFilesToPaste.set((await this.clipboardService.readResources()).length > 0);
 			/*if (pasteShouldMove) {
 				// Cut is done. Make sure to clear cut state.
 				await explorerService.setToCopy([], false);
@@ -1291,10 +1304,6 @@ export class Addon extends vscode.TreeItem {
 	contextValue = 'addon';
 }
 
-interface FileList {
-    [Symbol.iterator](): IterableIterator<File>;
-}
-
 export class FileStat implements vscode.FileStat {
 
 	constructor(private fsStat: fs.Stats) { }
@@ -1325,5 +1334,22 @@ export class FileStat implements vscode.FileStat {
 
 	get mtime(): number {
 		return this.fsStat.mtime.getTime();
+	}
+}
+
+class ContextKey {
+	private _name: string;
+	private _lastValue: boolean = false;
+
+	constructor(name: string) {
+		this._name = name;
+	}
+
+	public set(value: boolean): void {
+		if (this._lastValue === value) {
+			return;
+		}
+		this._lastValue = value;
+		vscode.commands.executeCommand('setContext', this._name, this._lastValue);
 	}
 }
