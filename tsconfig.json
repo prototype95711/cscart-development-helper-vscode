@@ -3,6 +3,7 @@
 		"module": "Node16",
 		"target": "ES2016",
 		"outDir": "out",
+		"experimentalDecorators": true,
 		"lib": [
 			"ES2016"
 		],

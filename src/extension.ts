@@ -6,6 +6,7 @@ import { AddonExplorer, Addon, selectAddon } from './addons/AddonExplorer';
 import { showAddonPicker } from './addons/AddonPicker';
 
 import * as messages from './addons/AddonMessages';
+import { AddonFileDecorationProvider } from './addons/files/Decorator';
 
 let disposables: vscode.Disposable[] = [];
 
@@ -81,6 +82,14 @@ export function activate(context: vscode.ExtensionContext) {
 			'csAddonExplorer.paste', 
 			(resource) => addonExplorer.paste(resource)
 		));
+		
+		const fileDecorationProvider = new AddonFileDecorationProvider();
+		context.subscriptions.push(
+			addonExplorer.onDidCutFile(
+				e => fileDecorationProvider.onCutFiles(e)
+			)
+		);
+		context.subscriptions.push(fileDecorationProvider);
 
 	} else {
 		vscode.window.showInformationMessage(messages.NO_ADDONS_IN_WORKSPACE_ERROR);

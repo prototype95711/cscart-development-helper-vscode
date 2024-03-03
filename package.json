@@ -139,6 +139,18 @@
         }
       ]
     },
+    "colors": [
+      {
+        "id": "csAddonExplorer.cuttedFilesForeground",
+        "description": "%colors.added%",
+        "defaults": {
+          "light": "#858585",
+          "dark": "#767676",
+          "highContrast": "#c5c5c5",
+          "highContrastLight": "#374e06"
+        }
+      }
+    ],
     "views": {
       "cs-addon-explorer": [
         {

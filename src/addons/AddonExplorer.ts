@@ -128,7 +128,7 @@ namespace _ {
 	}
 }
 
-interface AddonEntry {
+export interface AddonEntry {
 	addon: string;
 	offset: number;
 	uri: vscode.Uri;
@@ -137,6 +137,31 @@ interface AddonEntry {
 
 export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 	addonExplorer.add(addon);
+}
+
+/**
+	 * Label describing the {@link TreeItem Tree item}
+	 */
+export class TreeItemLabelCustom implements vscode.TreeItemLabel {
+
+	/**
+	 * A human-readable string describing the {@link TreeItem Tree item}.
+	 */
+	label: string = '';
+
+	/**
+	 * Ranges in the label to highlight. A range is defined as a tuple of two number where the
+	 * first is the inclusive start index and the second the exclusive end index
+	 */
+	highlights?: Array<[number, number]>;
+
+	strikethrough?: boolean;
+
+	constructor(label: string, highlights: Array<[number, number]>, strikethrough: boolean) {
+		this.label = label;
+		this.highlights = highlights;
+		this.strikethrough = strikethrough;
+	}
 }
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
@@ -154,6 +179,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	private clipboardService: IClipboardService;
 	private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
+	private _onDidCutFile: vscode.EventEmitter<AddonEntry[]>;
 	private _selectedAddons: string[] = [];
 
 	private _onDidChangeTreeData: vscode.EventEmitter<Addon | AddonEntry | undefined | void> = new vscode.EventEmitter<Addon | AddonEntry | undefined | void>();
@@ -163,11 +189,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this._hasFilesToPaste = new ContextKey('addonExplorer.hasFilesToPaste');
 
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+		this._onDidCutFile = new vscode.EventEmitter<AddonEntry[]>();
 		this.clipboardService = new ClipboardService();
 	}
 
 	get onDidChangeFile(): vscode.Event<vscode.FileChangeEvent[]> {
 		return this._onDidChangeFile.event;
+	}
+
+	get onDidCutFile(): vscode.Event<AddonEntry[]> {
+		return this._onDidCutFile.event;
 	}
 
 	add(addon: string): void {
@@ -196,11 +227,22 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			);
 			
 			if (element.type === vscode.FileType.File) {
-				treeItem.command = { command: 'csAddonExplorer.openFile', title: "Open File", arguments: [element.uri] };
+				treeItem.command = { 
+					command: 'csAddonExplorer.openFile', 
+					title: "Open File", 
+					arguments: [element.uri] 
+				};
 				treeItem.contextValue = 'file';
 			} else if (element.type === vscode.FileType.Directory) {
 				treeItem.contextValue = 'folder';
 			}
+
+			/*const _label: vscode.TreeItemLabel = new TreeItemLabelCustom(
+				treeItem?.label?.toString() ?? 'p',
+				[],
+				true
+			);
+			treeItem.label =  _label;*/
 
 			return treeItem;
 		}
@@ -785,6 +827,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		await this.clipboardService.writeResources(items.map(s => s.uri));
 
 		this._hasFilesToPaste.set(items.length > 0);
+
+		if (cut) {
+			this._onDidCutFile.fire(items);
+		} else {
+			this._onDidCutFile.fire([]);
+		}
 
 		//this.view?.itemsCopied(items, cut, previouslyCutItems);
 	}
