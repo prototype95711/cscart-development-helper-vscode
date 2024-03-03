@@ -5,7 +5,7 @@ import { AddonEntry } from '../AddonExplorer';
 export class AddonFileDecorationProvider implements vscode.FileDecorationProvider {
 
 	private static CuttedFileDecorationData: vscode.FileDecoration = {
-		tooltip: 'Cutted',
+		tooltip: 'Cutted in CS-Cart Addon Explorer',
 		badge: 'C',
 		color: new vscode.ThemeColor('csAddonExplorer.cuttedFilesForeground')
 	};
@@ -65,7 +65,7 @@ export class Resource implements vscode.SourceControlResourceState {
 
 	static getCuttedText(cutted: boolean) {
 		switch (cutted) {
-			case true: return vscode.l10n.t('Cutted');
+			case true: return vscode.l10n.t('Cutted in CS-Cart Addon Explorer');
 			default: return '';
 		}
 	}

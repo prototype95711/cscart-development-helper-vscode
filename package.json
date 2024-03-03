@@ -95,7 +95,7 @@
         {
           "command": "csAddonExplorer.revealFileInExplorer",
           "when": "view == csAddonExplorer && viewItem == file",
-          "group": "navigation@1"
+          "group": "2_view@1"
         },
         {
           "command": "csAddonExplorer.openWith",
@@ -110,32 +110,32 @@
         {
           "command": "csAddonExplorer.revealFileInOS.linux",
           "when": "view == csAddonExplorer && viewItem == file && isLinux",
-          "group": "navigation@1"
+          "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.mac",
           "when": "view == csAddonExplorer && viewItem == file && isMac",
-          "group": "navigation@1"
+          "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.windows",
           "when": "view == csAddonExplorer && viewItem == file && isWindows",
-          "group": "navigation@1"
+          "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.cut",
           "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
-          "group": "navigation@2"
+          "group": "1_modification@3"
         },
         {
           "command": "csAddonExplorer.copy",
           "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
-          "group": "navigation@2"
+          "group": "1_modification@3"
         },
         {
           "command": "csAddonExplorer.paste",
           "when": "view == csAddonExplorer && viewItem == folder && addonExplorer.hasFilesToPaste",
-          "group": "navigation@1"
+          "group": "1_modification@3"
         }
       ]
     },

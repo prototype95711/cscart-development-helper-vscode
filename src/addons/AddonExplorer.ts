@@ -814,12 +814,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		this.setToCopy(toCopy, false);
 		this.pasteShouldMove = false;
-
-		/*if (target instanceof vscode.Uri) {
-			await vscode.commands.executeCommand('filesExplorer.copy');
-		} else {
-			await vscode.commands.executeCommand('filesExplorer.copy');
-		}*/
 	}
 
 	async setToCopy(items: AddonEntry[], cut: boolean): Promise<void> {
@@ -833,8 +827,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		} else {
 			this._onDidCutFile.fire([]);
 		}
-
-		//this.view?.itemsCopied(items, cut, previouslyCutItems);
 	}
 
 	async getFilesToPaste(): Promise<readonly vscode.Uri[]> {
@@ -972,6 +964,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			this.cutItems = [];
 			this.clipboardService.writeResources([]);
 			this._hasFilesToPaste.set((await this.clipboardService.readResources()).length > 0);
+			this._onDidCutFile.fire([]);
 			/*if (pasteShouldMove) {
 				// Cut is done. Make sure to clear cut state.
 				await explorerService.setToCopy([], false);
