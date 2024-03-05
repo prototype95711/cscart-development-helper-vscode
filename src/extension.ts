@@ -71,6 +71,14 @@ export function activate(context: vscode.ExtensionContext) {
 			(resource) => addonExplorer.revealFileInOS(resource)
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.copyPath', 
+			(resource) => addonExplorer.copyPath(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.copyRelativeFilePath', 
+			(resource) => addonExplorer.copyRelativeFilePath(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.cut', 
 			(resource) => addonExplorer.cut(resource)
 		));
@@ -81,6 +89,22 @@ export function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.paste', 
 			(resource) => addonExplorer.paste(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.findInFolder', 
+			(resource) => addonExplorer.findInFolder(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.rename', 
+			args => {
+				if (args) {
+					addonExplorer.renameCommand(args);
+				}
+			}
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.delete', 
+			(resource) => addonExplorer.deleteCommand(resource)
 		));
 		
 		const fileDecorationProvider = new AddonFileDecorationProvider();

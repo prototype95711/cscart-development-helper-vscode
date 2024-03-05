@@ -166,6 +166,7 @@ export class TreeItemLabelCustom implements vscode.TreeItemLabel {
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
 
+	private editor: vscode.TextEditor | undefined;
 	private _hasFilesToPaste: ContextKey;
 
 	dropMimeTypes = ['application/vnd.code.tree.csAddonExplorer'];
@@ -211,6 +212,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	refresh(): void {
+		this.editor = vscode.window.activeTextEditor;
 		this._onDidChangeTreeData.fire();
 	} 
 
@@ -731,6 +733,116 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			await vscode.commands.executeCommand('revealFileInOS', resource);
 		} else {
 			await vscode.commands.executeCommand('revealFileInOS', resource.uri);
+		}
+	}
+
+	public async findInFolder(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('filesExplorer.findInFolder', resource);
+		} else {
+			await vscode.commands.executeCommand('filesExplorer.findInFolder', resource.uri);
+		}
+	}
+
+	public async renameCommand(resource: AddonEntry | vscode.Uri) {
+
+		if (resource instanceof vscode.Uri) {
+			return;
+		}
+
+		vscode.window.showInputBox({ 
+				placeHolder: 'Enter the new name', 
+				value: path.basename(resource.uri.path) 
+			}).then(value => {
+				const editor = this.editor;
+				const tree = this.tree;
+
+				if (value !== null && value !== undefined && editor && tree) {
+					editor.edit(editBuilder => {
+						if (resource) {
+							const range = new vscode.Range(
+								editor.document.positionAt(resource.offset), 
+								editor.document.positionAt(resource.offset + path.basename(resource.uri.path).length)
+							);
+							editBuilder.replace(range, `"${value}"`);
+							var fpath = resource.uri.fsPath.split('/');
+							fpath.pop();
+							const target_uri = vscode.Uri.file(path.join(fpath.join('/'), value));
+
+							this.rename(resource.uri, target_uri, {overwrite: true});
+							setTimeout(() => {
+								this.refresh();
+							}, 100);
+						}
+					});
+				}
+			}
+		);
+	}
+
+	public async deleteCommand(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		var uri: vscode.Uri;
+
+		if (resource instanceof vscode.Uri) {
+			uri = resource;
+		} else {
+			uri = resource?.uri;
+		}
+
+		if (!uri) {
+			return;
+		}
+
+		const dialogTitle = vscode.l10n.t(
+			"Are you sure you want to delete '{0}'?", 
+			path.basename(uri.path)
+		);
+
+		await vscode.window.showInformationMessage(
+			dialogTitle,
+			vscode.l10n.t("Delete"),
+			vscode.l10n.t("Cancel")
+		).then(answer => {
+			if (answer === vscode.l10n.t("Delete")) {
+				this.delete(uri, {recursive: true});
+				this.refresh();
+			}
+		});
+	}
+
+	public async copyPath(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('copyFilePath', resource);
+		} else {
+			await vscode.commands.executeCommand('copyFilePath', resource.uri);
+		}
+	}
+
+	public async copyRelativeFilePath(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		if (resource instanceof vscode.Uri) {
+			await vscode.commands.executeCommand('copyRelativeFilePath', resource);
+		} else {
+			await vscode.commands.executeCommand('copyRelativeFilePath', resource.uri);
 		}
 	}
 

@@ -67,6 +67,14 @@
         "title": "%command.revealFileInOS.windows%"
       },
       {
+        "command": "csAddonExplorer.copyPath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "csAddonExplorer.copyRelativeFilePath",
+        "title": "Copy Relative Path"
+      },
+      {
         "command": "csAddonExplorer.cut",
         "title": "Cut"
       },
@@ -77,6 +85,18 @@
       {
         "command": "csAddonExplorer.paste",
         "title": "Paste"
+      },
+      {
+        "command": "csAddonExplorer.findInFolder",
+        "title": "Find in Folder..."
+      },
+      {
+        "command": "csAddonExplorer.rename",
+        "title": "Rename..."
+      },
+      {
+        "command": "csAddonExplorer.delete",
+        "title": "Delete"
       }
     ],
     "menus": {
@@ -104,23 +124,33 @@
         },
         {
           "command": "csAddonExplorer.openFileToSide",
-          "when": "view == csAddonExplorer && viewItem == file",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
           "group": "navigation@1"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.linux",
-          "when": "view == csAddonExplorer && viewItem == file && isLinux",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder) && isLinux",
           "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.mac",
-          "when": "view == csAddonExplorer && viewItem == file && isMac",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder) && isMac",
           "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.windows",
-          "when": "view == csAddonExplorer && viewItem == file && isWindows",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder) && isWindows",
           "group": "2_view@2"
+        },
+        {
+          "command": "csAddonExplorer.copyPath",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "group": "2@2"
+        },
+        {
+          "command": "csAddonExplorer.copyRelativeFilePath",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "group": "2@2"
         },
         {
           "command": "csAddonExplorer.cut",
@@ -136,6 +166,21 @@
           "command": "csAddonExplorer.paste",
           "when": "view == csAddonExplorer && viewItem == folder && addonExplorer.hasFilesToPaste",
           "group": "1_modification@3"
+        },
+        {
+          "command": "csAddonExplorer.findInFolder",
+          "when": "view == csAddonExplorer && viewItem == folder",
+          "group": "4_search"
+        },
+        {
+          "command": "csAddonExplorer.rename",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "group": "7_modification"
+        },
+        {
+          "command": "csAddonExplorer.delete",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "group": "7_modification"
         }
       ]
     },
