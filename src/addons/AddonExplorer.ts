@@ -165,8 +165,6 @@ export class TreeItemLabelCustom implements vscode.TreeItemLabel {
 }
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
-
-	private editor: vscode.TextEditor | undefined;
 	private _hasFilesToPaste: ContextKey;
 
 	dropMimeTypes = ['application/vnd.code.tree.csAddonExplorer'];
@@ -212,7 +210,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	refresh(): void {
-		this.editor = vscode.window.activeTextEditor;
 		this._onDidChangeTreeData.fire();
 	} 
 
@@ -433,15 +430,17 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	async _rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean; }): Promise<void> {
 		const exists = await _.exists(newUri.fsPath);
+
 		if (exists) {
 			if (!options.overwrite) {
 				throw vscode.FileSystemError.FileExists();
 			} else {
-				await _.rmrf(newUri.fsPath);
+				_.rmrf(newUri.fsPath);
 			}
 		}
 
 		const parentExists = await _.exists(path.dirname(newUri.fsPath));
+
 		if (!parentExists) {
 			await _.mkdir(path.dirname(newUri.fsPath));
 		}
@@ -646,6 +645,44 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return addons;
 	}
 
+	public async newFile(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		var uri: vscode.Uri;
+
+		if (resource instanceof vscode.Uri) {
+			uri = resource;
+		} else {
+			uri = resource.uri;
+		}
+
+		vscode.window.showInputBox({ 
+			placeHolder: vscode.l10n.t('Enter the file or folder name'), 
+			value: '' 
+		}).then(
+			value => this.askNewFile(uri, value)
+		);
+	}
+
+	public async askNewFile(uri: vscode.Uri, newFilename: string | undefined) {
+		const tree = this.tree;
+
+		if (newFilename !== null && newFilename !== undefined && newFilename && tree) {
+			const target_uri = vscode.Uri.file(path.join(uri.fsPath, newFilename));
+
+			var canOverwrite = await this.askForOverwrite(target_uri);
+
+			this.writeFile(target_uri, new Uint8Array(), {create: true, overwrite: canOverwrite});
+			
+			setTimeout(() => {
+				this.refresh();
+			}, 100);
+		}
+	}
+
 	public async openFile(resource: vscode.Uri) {
 		const activeTextEditor = vscode.window.activeTextEditor;
 		const previousVisibleRange = activeTextEditor?.visibleRanges[0];
@@ -755,34 +792,32 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return;
 		}
 
-		vscode.window.showInputBox({ 
-				placeHolder: 'Enter the new name', 
-				value: path.basename(resource.uri.path) 
-			}).then(value => {
-				const editor = this.editor;
-				const tree = this.tree;
-
-				if (value !== null && value !== undefined && editor && tree) {
-					editor.edit(editBuilder => {
-						if (resource) {
-							const range = new vscode.Range(
-								editor.document.positionAt(resource.offset), 
-								editor.document.positionAt(resource.offset + path.basename(resource.uri.path).length)
-							);
-							editBuilder.replace(range, `"${value}"`);
-							var fpath = resource.uri.fsPath.split('/');
-							fpath.pop();
-							const target_uri = vscode.Uri.file(path.join(fpath.join('/'), value));
-
-							this.rename(resource.uri, target_uri, {overwrite: true});
-							setTimeout(() => {
-								this.refresh();
-							}, 100);
-						}
-					});
-				}
-			}
+		await vscode.window.showInputBox({ 
+			placeHolder: vscode.l10n.t('Enter the new name'), 
+			value: path.basename(resource.uri.path) 
+		}).then(
+			value => this.askRename(resource, value)
 		);
+	}
+
+	private async askRename(resource: AddonEntry, value: string | undefined) {
+		const tree = this.tree;
+
+		if (value !== null && value !== undefined && value && tree) {
+			if (resource) {
+				var fpath = resource.uri.fsPath.split('/');
+				fpath.pop();
+	
+				const target_uri = vscode.Uri.file(path.join(fpath.join('/'), value));
+	
+				var canOverwrite = await this.askForOverwrite(target_uri);
+	
+				this.rename(resource.uri, target_uri, {overwrite: canOverwrite});
+				setTimeout(() => {
+					this.refresh();
+				}, 100);
+			}
+		}
 	}
 
 	public async deleteCommand(resource: AddonEntry | vscode.Uri) {

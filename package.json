@@ -35,6 +35,10 @@
         }
       },
       {
+        "command": "csAddonExplorer.newFile",
+        "title": "New file..."
+      },
+      {
         "command": "csAddonExplorer.open",
         "title": "Open addon"
       },
@@ -113,6 +117,11 @@
       ],
       "view/item/context": [
         {
+          "command": "csAddonExplorer.newFile",
+          "when": "view == csAddonExplorer && viewItem == folder",
+          "group": "navigation@1"
+        },
+        {
           "command": "csAddonExplorer.revealFileInExplorer",
           "when": "view == csAddonExplorer && viewItem == file",
           "group": "2_view@1"
@@ -180,7 +189,7 @@
         {
           "command": "csAddonExplorer.delete",
           "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
-          "group": "7_modification"
+          "group": "8_modification"
         }
       ]
     },

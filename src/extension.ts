@@ -47,6 +47,10 @@ export function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(view);
 
 		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.newFile', 
+			(resource) => addonExplorer.newFile(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.openFile', 
 			(resource) => addonExplorer.openFile(resource)
 		));
