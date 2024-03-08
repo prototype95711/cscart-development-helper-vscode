@@ -645,6 +645,45 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return addons;
 	}
 
+	public async newFolder(resource: AddonEntry | vscode.Uri) {
+
+		if (!resource) {
+			return;
+		}
+
+		var uri: vscode.Uri;
+
+		if (resource instanceof vscode.Uri) {
+			uri = resource;
+		} else {
+			uri = resource.uri;
+		}
+
+		vscode.window.showInputBox({ 
+			placeHolder: vscode.l10n.t('Enter the folder name'), 
+			value: '' 
+		}).then(
+			value => this.askNewFolder(uri, value)
+		);
+	}
+
+	public async askNewFolder(uri: vscode.Uri, newFoldername: string | undefined) {
+		const tree = this.tree;
+
+		if (newFoldername !== null && newFoldername !== undefined && newFoldername && tree) {
+			const target_uri = vscode.Uri.file(path.join(uri.fsPath, newFoldername));
+			const exists = await _.exists(target_uri.fsPath);
+
+			if (!exists) {
+				await _.mkdir(target_uri.fsPath);
+			}
+			
+			setTimeout(() => {
+				this.refresh();
+			}, 100);
+		}
+	}
+
 	public async newFile(resource: AddonEntry | vscode.Uri) {
 
 		if (!resource) {
@@ -660,7 +699,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 
 		vscode.window.showInputBox({ 
-			placeHolder: vscode.l10n.t('Enter the file or folder name'), 
+			placeHolder: vscode.l10n.t('Enter the file name'), 
 			value: '' 
 		}).then(
 			value => this.askNewFile(uri, value)
@@ -679,6 +718,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			
 			setTimeout(() => {
 				this.refresh();
+				this.openFile(target_uri);
 			}, 100);
 		}
 	}

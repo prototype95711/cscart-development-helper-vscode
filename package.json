@@ -39,6 +39,10 @@
         "title": "New file..."
       },
       {
+        "command": "csAddonExplorer.newFolder",
+        "title": "New folder..."
+      },
+      {
         "command": "csAddonExplorer.open",
         "title": "Open addon"
       },
@@ -118,6 +122,11 @@
       "view/item/context": [
         {
           "command": "csAddonExplorer.newFile",
+          "when": "view == csAddonExplorer && viewItem == folder",
+          "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.newFolder",
           "when": "view == csAddonExplorer && viewItem == folder",
           "group": "navigation@1"
         },
