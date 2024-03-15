@@ -173,6 +173,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	tree: AddonEntry[] = [];
 
 	private pasteShouldMove = false;
+	private focused: AddonEntry[] = [];
 	private selected: AddonEntry[] = [];
 	private cutItems: AddonEntry[] | undefined;
 
@@ -625,6 +626,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
+	/*focusItems(focused: vscode.TreeViewActiveItemChangeEvent<AddonEntry | Addon>) {
+		if (!focused?.activeItem) {
+			return;
+		}
+
+		if (focused?.activeItem instanceof Addon) {
+			
+		} else {
+			this.focused.push(focused.activeItem);
+			console.log(this.focused);
+		}
+	}*/
+
 	private getAddonItem(addon:string): Addon {
 		const addonData = this.addonReader.getAddonData(addon);
 
@@ -1045,6 +1059,17 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public async paste(element: AddonEntry | vscode.Uri) {
+
+		if (element === undefined) {
+
+			if (this.selected.length === 1) {
+				element = this.selected[0];
+			}
+
+			if (element === undefined) {
+				return;
+			}
+		}
 
 		const incrementalNaming = "disabled";
 

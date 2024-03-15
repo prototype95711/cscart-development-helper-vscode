@@ -44,6 +44,9 @@ export function activate(context: vscode.ExtensionContext) {
 		view.onDidChangeSelection(selection => {
 			addonExplorer.selectItems(selection);
 		});
+		/*view.onDidChangeActiveItem(active => {
+			addonExplorer.focusItems(active);
+		});*/
 		context.subscriptions.push(view);
 
 		context.subscriptions.push(vscode.commands.registerCommand(
