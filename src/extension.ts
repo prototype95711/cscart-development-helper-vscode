@@ -8,9 +8,14 @@ import { showAddonPicker } from './addons/AddonPicker';
 import * as messages from './addons/AddonMessages';
 import { AddonFileDecorationProvider } from './addons/files/Decorator';
 
+import path from 'path';
+import * as afs from './utility/afs';
+
+import { AddonsConfiguration, CONFIGURATION_FILE } from './addons/config/addonsConfiguration';
+
 let disposables: vscode.Disposable[] = [];
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
 	const rootPath = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
 		? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined;
@@ -31,6 +36,12 @@ export function activate(context: vscode.ExtensionContext) {
 				selectAddon
 			))
 		);
+
+		try {
+			await initializeFromConfigurationFile(context, addonExplorer);
+		} catch (err) {
+			console.log('Failed to initialize a CS Development Helper configuration.');
+		}
 
 		const view = vscode.window.createTreeView(
 			'csAddonExplorer', 
@@ -117,6 +128,17 @@ export function activate(context: vscode.ExtensionContext) {
 			'csAddonExplorer.delete', 
 			(resource) => addonExplorer.deleteCommand(resource)
 		));
+
+		context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(e => {
+			try {
+				// initialize new source control for manually added workspace folders
+				e.added.forEach(wf => {
+					initializeFolderFromConfigurationFile(wf, context, addonExplorer);
+				});
+			} catch (ex) {
+				
+			}
+		}));
 		
 		const fileDecorationProvider = new AddonFileDecorationProvider();
 		context.subscriptions.push(
@@ -153,4 +175,37 @@ export function deactivate() {
 		disposables.forEach(item => item.dispose());
 	}
 	disposables = [];
+}
+
+async function initializeFromConfigurationFile(context: vscode.ExtensionContext, explorer: AddonExplorer): Promise<void> {
+	if (!vscode.workspace.workspaceFolders) { return; }
+
+	const folderPromises = vscode.workspace.workspaceFolders.map(
+		async (folder) => await initializeFolderFromConfigurationFile(
+			folder, 
+			context,
+			explorer
+		)
+	);
+	await Promise.all(folderPromises);
+}
+
+async function initializeFolderFromConfigurationFile(
+	folder: vscode.WorkspaceFolder, 
+	context: vscode.ExtensionContext,
+	explorer: AddonExplorer
+): Promise<void> {
+	const configurationPath = path.join(folder.uri.fsPath, CONFIGURATION_FILE);
+
+	const configFileExists = await afs.exists(configurationPath);
+
+	if (configFileExists) {
+		const data = await afs.readFile(configurationPath);
+		const addonConfiguration = <AddonsConfiguration>JSON.parse(data.toString('utf-8'));
+		explorer.applyConfiguration(
+			addonConfiguration, 
+			folder, 
+			context
+		);
+	}
 }

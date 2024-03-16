@@ -12,6 +12,7 @@ import { isEqual, isEqualOrParent, rtrim } from '../utility/strings';
 import { posix, win32 } from 'path/posix';
 import { ResourceFileEdit } from '../utility/resourceFileEdit';
 import { IProgressCompositeOptions, IProgressNotificationOptions } from '../utility/progress';
+import { AddonsConfiguration, CONFIGURATION_FILE } from './config/addonsConfiguration';
 
 const NO_SELECTED_ADDONS_ERROR = 'Not selected addons for work';
 
@@ -203,16 +204,55 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	add(addon: string): void {
 		
+		this.openAddon(addon);
+
+		this.refresh();
+		this.saveCurrentConfiguration();
+	}
+
+	openAddon(addon: string): void {
+
 		if (this._selectedAddons.indexOf(addon) === -1) {
 			this._selectedAddons.push(addon);
 		}
-
-		this.refresh();
 	}
 
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
 	} 
+
+	saveCurrentConfiguration(): void {
+		const addonsConfiguration: AddonsConfiguration = {
+			selectedAddons: this._selectedAddons
+		};
+
+		this.saveConfiguration(vscode.Uri.file(this.addonReader.workspaceRoot), addonsConfiguration);
+	}
+
+	saveConfiguration(workspaceFolderUri: vscode.Uri, addonCofiguration: AddonsConfiguration): void {
+		const addonCofigurationString = JSON.stringify(addonCofiguration);
+		this._writeFile(
+			vscode.Uri.file(path.join(workspaceFolderUri.fsPath, CONFIGURATION_FILE)), 
+			Buffer.from(addonCofigurationString, 'utf-8'),
+			{
+				create: true,
+				overwrite: true
+			}
+		);
+	}
+
+	applyConfiguration(
+		configuration: AddonsConfiguration, 
+		workspaceFolder: vscode.WorkspaceFolder, 
+		context: vscode.ExtensionContext
+	): void
+	{
+		this._selectedAddons = [];
+		configuration.selectedAddons.map(
+			addon => this.openAddon(addon)
+		);
+		this.refresh();
+	}
 
 	getTreeItem(element: Addon | AddonEntry): vscode.TreeItem {
 
