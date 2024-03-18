@@ -175,6 +175,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	private pasteShouldMove = false;
 	private focused: AddonEntry[] = [];
+	private expanded: string[] = [];
 	private selected: AddonEntry[] = [];
 	private cutItems: AddonEntry[] | undefined;
 
@@ -223,9 +224,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	saveCurrentConfiguration(): void {
 		const addonsConfiguration: AddonsConfiguration = {
-			selectedAddons: this._selectedAddons
+			selectedAddons: this._selectedAddons,
+			expandedElements: this.expanded
 		};
-
 		this.saveConfiguration(vscode.Uri.file(this.addonReader.workspaceRoot), addonsConfiguration);
 	}
 
@@ -241,15 +242,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		);
 	}
 
-	applyConfiguration(
-		configuration: AddonsConfiguration, 
-		workspaceFolder: vscode.WorkspaceFolder, 
-		context: vscode.ExtensionContext
-	): void
+	async applyConfiguration(configuration: AddonsConfiguration, workspaceFolder: vscode.WorkspaceFolder): Promise<void>
 	{
 		this._selectedAddons = [];
 		configuration.selectedAddons.map(
 			addon => this.openAddon(addon)
+		);
+
+		configuration.expandedElements.map(
+			e =>  {
+				if (this.expanded.indexOf(e) === -1) {
+					this.expanded.push(e);
+				}
+			}
 		);
 		this.refresh();
 	}
@@ -259,11 +264,18 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (element instanceof Addon) {
 			return element;
 		} else {
+			const pathToFind = element.addon.concat('/', element.uri.path);
+			const collapsibleState = element.type === vscode.FileType.Directory 
+				? (
+					this.expanded.includes(pathToFind) 
+						? vscode.TreeItemCollapsibleState.Expanded 
+						: vscode.TreeItemCollapsibleState.Collapsed
+				)
+				: vscode.TreeItemCollapsibleState.None;
+
 			const treeItem = new vscode.TreeItem(
 				element.uri, 
-				element.type === vscode.FileType.Directory 
-					? vscode.TreeItemCollapsibleState.Collapsed 
-					: vscode.TreeItemCollapsibleState.None
+				collapsibleState
 			);
 			
 			if (element.type === vscode.FileType.File) {
@@ -679,10 +691,41 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}*/
 
+	expandItems(expanded: vscode.TreeViewExpansionEvent<AddonEntry | Addon>) {
+		const elementUri = expanded.element instanceof Addon 
+			? expanded.element.label 
+			: expanded.element.addon.concat('/', expanded.element.uri.path);
+
+		if (this.expanded.indexOf(elementUri) === -1) {
+			this.expanded.push(
+				expanded.element instanceof Addon 
+					? expanded.element.label 
+					: expanded.element.addon.concat('/', expanded.element.uri.path)
+			);
+		}
+		this.saveCurrentConfiguration();
+	}
+
+	collapseItems(collapsed: vscode.TreeViewExpansionEvent<AddonEntry | Addon>) {
+		const elementUri = collapsed.element instanceof Addon 
+			? collapsed.element.label 
+			: collapsed.element.addon.concat('/', collapsed.element.uri.path);
+		const index = this.expanded.indexOf(elementUri);
+
+		if (index !== -1) {
+			this.expanded.splice(this.expanded.indexOf(elementUri), 1);
+			this.saveCurrentConfiguration();
+		}
+	}
+
 	private getAddonItem(addon:string): Addon {
 		const addonData = this.addonReader.getAddonData(addon);
 
-		return new Addon(addon, addonData.addon.version, vscode.TreeItemCollapsibleState.Collapsed);
+		const collapsibleState = this.expanded.find(a => a === addon)
+			? vscode.TreeItemCollapsibleState.Expanded 
+			: vscode.TreeItemCollapsibleState.Collapsed;
+
+		return new Addon(addon, addonData.addon.version, collapsibleState);
 	}
 
 	/**
@@ -1536,7 +1579,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 		// The name to search is between two separators
 		const name = path.substring(index, indexOfNextSep);
-
 		const childs = await this.getChildren(this._getTreeElement(name));
 
 		if (childs.length > 0) {
