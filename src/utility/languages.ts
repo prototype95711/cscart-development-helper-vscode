@@ -1,7 +1,9 @@
+import * as vscode from 'vscode';
+
 export const DEFAULT_LANGUAGE = 'en';
 export const LANGUAGE_CODE_LENGTH = 2;
 
-export const languages = [
+export const languages: Language[] = [
     {
       name: 'Afrikaans',
       value: 'af',
@@ -413,5 +415,47 @@ export const languages = [
     {
       name: 'Zulu',
       value: 'zu',
-    },
+    }
   ];
+
+export function getLanguagePickerList(selected: string[]): vscode.QuickPickItem[] {
+  const getLanguageItems = (languages: Language[]) => 
+      languages
+        ? languages.map(
+          label => new LanguageQuickPickItem(
+              label.value,
+              label.name,
+              selected.includes(label.value)
+          )
+        )
+        : [];
+
+  return getLanguageItems(languages.filter(l => {return l.value !== DEFAULT_LANGUAGE;}));
+}
+
+class LanguageQuickPickItem implements vscode.QuickPickItem {
+
+	constructor(
+    public readonly code: string, 
+    public readonly name: string, 
+    public readonly picked: boolean
+  ) {
+	}
+
+	get label(): string {
+		return this.code;
+	}
+
+	get description(): string {
+		return this.name;
+	}
+
+	get alwaysShow(): boolean {
+		return this.picked;
+	}
+}
+
+interface Language {
+  name: string,
+  value: string
+}

@@ -3,23 +3,66 @@ import { Addon } from "./AddonExplorer";
 import { VAR_CATALOG, VAR_LANGS, VAR_LANG_FILE_EXTENSION, getTranslatesPath } from "./AddonFiles";
 import { AddonPath } from "./AddonPath";
 import * as afs from '../utility/afs';
-import { LANGUAGE_CODE_LENGTH, languages } from "../utility/languages";
-import { GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
+import { DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../utility/languages";
+import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
 
 export class AddonTranslator {
+    private selectedLanguages: string[] = [DEFAULT_LANGUAGE];
+    private charset: Array<[string, string]> = new Array<[string, string]>();
+    private langvars: Array<[string, LangVar]> = new Array<[string, LangVar]>();
 
-    public langvars: Array<[string, LangVar]> = new Array<[string, LangVar]>();
+    private headers: Array<[string, { [headerName: string]: string }]> 
+        = new Array<[string, { [headerName: string]: string }]>();
 
-    constructor(public workspaceRoot: string) {
+    constructor(public workspaceRoot: string, public addon: Addon) {
 	}
 
-    public async translate(addon: Addon) {
-		const addonTranslatesPath = await getTranslatesPath(this.workspaceRoot, addon.label);
+    public async translate() {
+        await this.selectLanguages();
+		const addonTranslatesPath = await getTranslatesPath(
+            this.workspaceRoot, 
+            this.addon.label
+        );
         
         if (addonTranslatesPath?.length > 0) {
             await this.parseTranslateFiles(addonTranslatesPath);
         }
 	}
+
+    public async selectLanguages() {
+        const langPick = vscode.window.createQuickPick();
+        langPick.canSelectMany = true;
+        langPick.items = getLanguagePickerList(this.selectedLanguages);
+        langPick.selectedItems = langPick.items.filter(item => item.picked);
+
+        langPick.onDidChangeSelection(selection => {
+            if (selection) {
+                this.selectLanguage(selection);
+            }
+        });
+        langPick.onDidAccept(accepted => {
+            langPick.hide();
+        });
+        langPick.onDidHide(() => langPick.dispose());
+        langPick.show();
+    }
+
+    public async selectLanguage(selected: readonly vscode.QuickPickItem[]) {
+        this.selectedLanguages = [DEFAULT_LANGUAGE];
+        selected.map(
+            lang_code => {
+                if (this.selectedLanguages.indexOf(lang_code.label) === -1) {
+                    this.selectedLanguages.push(lang_code.label);
+                }
+            }
+        );
+    }
+
+    public async save() {
+        if (this.langvars.length > 0) {
+            
+        }
+    }
 
     async parseTranslateFiles(translatesPath: AddonPath[]) {
         const varLangs = VAR_CATALOG.concat('/', VAR_LANGS);
@@ -62,6 +105,14 @@ export class AddonTranslator {
                 }
             }
         }
+
+        if (data.charset) {
+            this.charset.push([lang_code, data.charset]);
+        }
+
+        if (data.headers) {
+            this.headers.push([lang_code, data.headers]);
+        }
     }
 
     async setLangvarData(
@@ -78,14 +129,15 @@ export class AddonTranslator {
             };
             
             langvar_index = this.langvars.push([langvar, _langvar_data]);
-            langvar_index--;
+            langvar_index --;
         }
 
         for (const data in langvar_data) {
             const _langvar_value_data: LangVarValue = { 
                 lang_code: lang_code,
                 value: langvar_data[data]?.msgstr ?? '',
-                plural: langvar_data[data]?.msgid_plural ?? ''
+                plural: langvar_data[data]?.msgid_plural ?? '',
+                comments: langvar_data[data].comments
             };
             
             if (this.langvars[langvar_index]) {
@@ -127,5 +179,6 @@ interface LangVar {
 interface LangVarValue {
     lang_code: string;
     value: string[],
-    plural: string
+    plural: string,
+    comments: GetTextComment | undefined
 }
