@@ -35,6 +35,10 @@
         }
       },
       {
+        "command": "csAddonExplorer.translateAddon",
+        "title": "Translate..."
+      },
+      {
         "command": "csAddonExplorer.newFile",
         "title": "New file..."
       },
@@ -120,6 +124,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "csAddonExplorer.translateAddon",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "navigation@1"
+        },
         {
           "command": "csAddonExplorer.newFile",
           "when": "view == csAddonExplorer && viewItem == folder",
@@ -234,6 +243,7 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/gettext-parser": "4.0.4",
     "@types/mkdirp": "^0.5.2",
     "@types/mocha": "^10.0.3",
     "@types/node": "18.x",
@@ -243,6 +253,7 @@
     "@typescript-eslint/parser": "^6.9.0",
     "@vscode/test-electron": "^2.3.6",
     "eslint": "^8.52.0",
+    "gettext-parser": "4.0.0",
     "glob": "^10.3.10",
     "mocha": "^10.2.0",
     "typescript": "^5.2.2"

@@ -13,6 +13,7 @@ import { posix, win32 } from 'path/posix';
 import { ResourceFileEdit } from '../utility/resourceFileEdit';
 import { IProgressCompositeOptions, IProgressNotificationOptions } from '../utility/progress';
 import { AddonsConfiguration, CONFIGURATION_FILE } from './config/addonsConfiguration';
+import { AddonTranslator } from './AddonTranslator';
 
 const NO_SELECTED_ADDONS_ERROR = 'Not selected addons for work';
 
@@ -781,6 +782,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
+	public async translateAddon(resource: Addon) {
+		const addonTranslator = new AddonTranslator(
+			this.addonReader.workspaceRoot
+		);
+		await addonTranslator.translate(resource);
+	}
+
 	public async newFile(resource: AddonEntry | vscode.Uri) {
 
 		if (!resource) {
@@ -1162,47 +1170,48 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		try {
 			// Check if target is ancestor of pasted folder
 			
-			const sourceTargetPairs = this.coalesce(await Promise.all(toPaste.map(async fileToPaste => {
-	
-				if (
-					elementUri.path !== fileToPaste.path
-					&& isEqualOrParent(elementUri.path, fileToPaste.path)
-				) {
-					throw new Error("File to paste is an ancestor of the destination folder");
-				}
-				const fileToPasteStat = await _.stat(fileToPaste.path);
-	
-				// Find target
-				var target: AddonEntry;
+			const sourceTargetPairs = this.coalesce(await Promise.all(
+				toPaste.map(async fileToPaste => {
+					if (
+						elementUri.path !== fileToPaste.path
+						&& isEqualOrParent(elementUri.path, fileToPaste.path)
+					) {
+						throw new Error("File to paste is an ancestor of the destination folder");
+					}
+					const fileToPasteStat = await _.stat(fileToPaste.path);
+		
+					// Find target
+					var target: AddonEntry;
 
-				const elementObj = element instanceof vscode.Uri ?
-					this._getTreeElement(element.path)
-					: element;
+					const elementObj = element instanceof vscode.Uri ?
+						this._getTreeElement(element.path)
+						: element;
 
-				if (elementUri === fileToPaste) {
-					target = this._getParent(elementUri);
-				} else {
-					target = elementObj?.type === vscode.FileType.Directory 
-						? elementObj
-						: this._getParent(elementUri);
+					if (elementUri === fileToPaste) {
+						target = this._getParent(elementUri);
+					} else {
+						target = elementObj?.type === vscode.FileType.Directory 
+							? elementObj
+							: this._getParent(elementUri);
+					}
+		
+					const targetFile = await this.findValidPasteFileTarget(
+						target,
+						{ 
+							resource: fileToPaste, 
+							isDirectory: fileToPasteStat.isDirectory(), 
+							allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
+						},
+						incrementalNaming
+					);
+		
+					if (!targetFile) {
+						return undefined;
+					}
+		
+					return { source: fileToPaste, target: targetFile, target_element: target};
 				}
-	
-				const targetFile = await this.findValidPasteFileTarget(
-					target,
-					{ 
-						resource: fileToPaste, 
-						isDirectory: fileToPasteStat.isDirectory(), 
-						allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
-					},
-					incrementalNaming
-				);
-	
-				if (!targetFile) {
-					return undefined;
-				}
-	
-				return { source: fileToPaste, target: targetFile, target_element: target};
-			})));
+			)));
 	
 			if (sourceTargetPairs.length >= 1) {
 				// Move/Copy File

@@ -66,37 +66,8 @@ export class AddonReader {
 		
 		const pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(_path => _path && pathExists(_path.path));
 
-		const addonPathes = pathes.map(_path => {
-
-			const _addonPath = new AddonPath(
-				'',
-				vscode.FileType.Unknown
-			);
-
-			if (
-				_path === null
-				|| (_path && !_path.path.includes(currentPath))
-			) {
-				return _addonPath;
-			}
-
-			const pathes = [];
-			const _distPath = _path.path.replace(this.workspaceRoot, '');
-			const pieces = _distPath.split('/').filter(dir => dir);
-			const nextFolderKey = offset === -1 ? 0 : offset + 1;
-
-			if (pieces.length <= nextFolderKey) {
-				return _addonPath;
-			}
-
-			for (let k = 0; k <= nextFolderKey; k++) {
-				pathes.push(pieces[k]);
-			}
-
-			_addonPath.path = path.join(this.workspaceRoot, pathes.join('/'));
-			_addonPath.type = pieces[nextFolderKey].includes('.') ? vscode.FileType.File : _path.type;
-
-			return _addonPath;
+		const addonPathes = pathes.map(_path => { 
+			return this.getAddonPath(_path, offset, currentPath);
 		});
 
 		const onlyUnique = (value:AddonPath, index: number, array: AddonPath[]) => {
@@ -104,5 +75,37 @@ export class AddonReader {
 		};
 		
 		return Promise.resolve(addonPathes.filter(_path => _path && _path.path).filter(onlyUnique));
+	}
+
+	getAddonPath(_path: AddonPath | null, offset:number = 0, currentPath:string = ''): AddonPath {
+		const _addonPath = new AddonPath(
+			'',
+			vscode.FileType.Unknown
+		);
+
+		if (
+			_path === null
+			|| (_path && !_path.path.includes(currentPath))
+		) {
+			return _addonPath;
+		}
+
+		const pathes = [];
+		const _distPath = _path.path.replace(this.workspaceRoot, '');
+		const pieces = _distPath.split('/').filter(dir => dir);
+		const nextFolderKey = offset === -1 ? 0 : offset + 1;
+
+		if (pieces.length <= nextFolderKey) {
+			return _addonPath;
+		}
+
+		for (let k = 0; k <= nextFolderKey; k++) {
+			pathes.push(pieces[k]);
+		}
+
+		_addonPath.path = path.join(this.workspaceRoot, pathes.join('/'));
+		_addonPath.type = pieces[nextFolderKey].includes('.') ? vscode.FileType.File : _path.type;
+
+		return _addonPath;
 	}
 }

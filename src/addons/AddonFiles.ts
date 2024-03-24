@@ -3,29 +3,29 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { AddonPath, pathExists } from './AddonPath';
 
-const APP_CATALOG = 'app';
-const ADDON_CATALOG = 'addons';
-const ADDON_XML_FILENAME = 'addon.xml';
+export const APP_CATALOG = 'app';
+export const ADDON_CATALOG = 'addons';
+export const ADDON_XML_FILENAME = 'addon.xml';
 
-const DESIGN_CATALOG = 'design';
-const DESIGN_BACKEND_CATALOG = 'backend';
-const DESIGN_THEMES_CATALOG = 'themes';
-const DESIGN_PARTS = [
+export const DESIGN_CATALOG = 'design';
+export const DESIGN_BACKEND_CATALOG = 'backend';
+export const DESIGN_THEMES_CATALOG = 'themes';
+export const DESIGN_PARTS = [
 	'css',
 	'mail/templates',
 	'media/images',
 	'templates'
 ];
-const DESIGN_THEME_MANIFEST_FILENAME = 'manifest.json';
+export const DESIGN_THEME_MANIFEST_FILENAME = 'manifest.json';
 
-const JS_CATALOG = 'js';
+export const JS_CATALOG = 'js';
 
-const VAR_CATALOG = 'var';
-const VAR_LANGS = 'langs';
+export const VAR_CATALOG = 'var';
+export const VAR_LANGS = 'langs';
 
-const VAR_LANG_FILE_EXTENSION = '.po';
+export const VAR_LANG_FILE_EXTENSION = '.po';
 
-const VAR_THEMES_REPOSITORY_CATALOG = 'themes_repository';
+export const VAR_THEMES_REPOSITORY_CATALOG = 'themes_repository';
 
 export function getAddonsPath(workspaceRoot: string | undefined) {
 
