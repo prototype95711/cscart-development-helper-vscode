@@ -46,6 +46,7 @@ export class AddonTranslator {
         });
         langPick.onDidAccept(async accepted => {
             langPick.hide();
+            await this.translateLangVars();
             await this.save();
         });
         langPick.onDidHide(() => langPick.dispose());
@@ -61,6 +62,121 @@ export class AddonTranslator {
                 }
             }
         );
+    }
+
+    protected async translateLangVars() {
+        if (!this.selectedLanguages?.length) {
+            return;
+        }
+
+        await Promise.all(
+            this.selectedLanguages.map(
+                async sl => {
+                    await this.translateLangVarsForLanguage(sl);
+                }
+            )
+        );
+
+        console.log(this.langvars);
+    }
+
+    protected async translateLangVarsForLanguage(lang_code: string) {
+        var toTranslate = this.langvars.filter(
+            lv => {
+                const index = lv[1].values.findIndex(v => {
+                    return v.lang_code === lang_code;
+                });
+                const isExist = index >= 0;
+
+                return !isExist || !lv[1].values[index].value?.length;
+            }
+        );
+
+        if (toTranslate.length > 0) {
+            var translateStrings: string[] = [];
+            var varsKeys: number[] = [];
+
+            var key = 0;
+            toTranslate.map(
+                lv => {
+                    lv[1].values.map(v => {
+                        v.value.map (
+                            val => {
+                                const _key = translateStrings.indexOf(val);
+
+                                if (val.trim()) {
+                                    if (_key === -1) {
+                                        varsKeys[key] = translateStrings.push(
+                                            val
+                                        );
+                                    } else {
+                                        varsKeys[key] = _key;
+                                    }
+                                }
+
+                                key ++;
+                            }
+                        );
+                    });
+                }
+            );
+            
+            var translate = require("translate-google-fixed-api");
+
+            try {
+                const result = await translate(translateStrings, {
+                    tld: "ru",
+                    to: lang_code
+                });
+
+                if (result?.length > 0) {
+                    key = 0;
+                    toTranslate = toTranslate.map(
+                        tt => {
+                            tt[1].values = tt[1].values.map(v => {
+                                var newValue: LangVarValue = v;
+                                newValue.lang_code = lang_code;
+                                newValue.value = v.value.map(
+                                    val => {
+                                        if (varsKeys?.[key]) {
+                                            
+                                            if (result?.[varsKeys[key] - 1]) {
+                                                val = result[varsKeys[key] - 1];
+                                            }
+                                        }
+        
+                                        key ++;
+
+                                        return val;
+                                    }
+                                );
+
+                                return newValue;
+                            });
+
+                            return tt;
+                        }
+                    );
+                }
+
+            } catch (e) {
+                
+            }
+
+            toTranslate.map(
+                tt => {
+                    var index = this.langvars.findIndex(
+                        lv => {return lv[1].id === tt[1].id;}
+                    );
+
+                    if (index >= 0) {
+                        this.langvars[index][1].values = this.langvars[index][1].values.concat(
+                            tt[1].values.filter(v => {return v.lang_code === lang_code;})
+                        );
+                    }
+                }
+            );
+        }
     }
 
     public async save() {

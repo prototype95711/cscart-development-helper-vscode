@@ -262,6 +262,7 @@
     "@memorize/vscode": "^0.9.1",
     "mkdirp": "^0.5.1",
     "rimraf": "^5.0.5",
+    "translate-google-fixed-api": "^1.0.1",
     "xml2js": "0.5.0"
   }
 }

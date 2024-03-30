@@ -791,7 +791,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		addonTranslator.onDidSaveTranslateFiles(function() {
 			explorer.refresh();
 		});
-		
+
 		await addonTranslator.translate();
 	}
 
@@ -971,36 +971,90 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
-	public async deleteCommand(resource: AddonEntry | vscode.Uri) {
+	private getCommandTarget(target: AddonEntry| vscode.Uri): AddonEntry[] {
+		var targets: AddonEntry[] = [];
+		var _selected = this.selected;
 
-		if (!resource) {
+		if (target && _selected.length <= 1) {	
+			var itemTarget: AddonEntry;
+
+			if (target instanceof vscode.Uri) {
+				itemTarget = this._getTreeElement(target.path);
+			} else {
+				itemTarget = target;
+			}
+
+			if (itemTarget && targets.indexOf(itemTarget) === -1) {
+				targets.push(itemTarget);
+			}
+
+			if (_selected.length === 1) {
+				_selected.filter(element => {
+					if (element.uri.path === itemTarget.uri.path 
+						|| isEqualOrParent(element.uri.path, itemTarget.uri.path)
+					) {
+						return false;
+					}
+
+					return true;
+				});
+			}
+
+		} else if (_selected.length > 0) {
+			targets = _selected;
+		}
+
+		return targets;
+	}
+
+	public async deleteCommand(target: AddonEntry | vscode.Uri) {
+
+		const targets: AddonEntry[] = this.getCommandTarget(target);
+
+		if (targets?.length <= 0) {
 			return;
 		}
 
-		var uri: vscode.Uri;
+		var uris: vscode.Uri[] = targets.map(
+			_target => {
+				if (_target instanceof vscode.Uri) {
+					return _target;
+				} else {
+					return _target?.uri;
+				}
+			}
+		).filter(tg => {return tg?.path;});
 
-		if (resource instanceof vscode.Uri) {
-			uri = resource;
+		if (uris?.length <= 0) {
+			return;
+		}
+
+		var dialogTitle = '';
+
+		if (uris.length === 1) {
+			dialogTitle = vscode.l10n.t(
+				"Are you sure you want to delete '{0}'?", 
+				path.basename(uris[0].path)
+			);
 		} else {
-			uri = resource?.uri;
+			dialogTitle = vscode.l10n.t(
+				"Are you sure you want to delete the following '{0}' items?", 
+				uris.length
+			);
 		}
 
-		if (!uri) {
-			return;
-		}
-
-		const dialogTitle = vscode.l10n.t(
-			"Are you sure you want to delete '{0}'?", 
-			path.basename(uri.path)
-		);
-
-		await vscode.window.showInformationMessage(
+		await vscode.window.showWarningMessage(
 			dialogTitle,
 			vscode.l10n.t("Delete"),
 			vscode.l10n.t("Cancel")
-		).then(answer => {
+		).then(async answer => {
 			if (answer === vscode.l10n.t("Delete")) {
-				this.delete(uri, {recursive: true});
+				uris.map(
+					async uri => await this.delete(
+						uri, 
+						{recursive: true}
+					)
+				);
 				this.refresh();
 			}
 		});
