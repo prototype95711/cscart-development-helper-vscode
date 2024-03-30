@@ -120,6 +120,25 @@ export async function getAddonJsPath(workspaceRoot: string | undefined, addon: s
 	return new AddonPath(path.join(workspaceRoot, JS_CATALOG, ADDON_CATALOG, addon), vscode.FileType.Directory);
 }
 
+export function getTranslateFilePath(workspaceRoot: string | undefined, addon: string, langCode: string): string {
+
+	if (!workspaceRoot) {
+		return '';
+	}
+
+	const addonLangFile = addon.concat(VAR_LANG_FILE_EXTENSION);
+	const langFilePath = path.join(
+		workspaceRoot, 
+		VAR_CATALOG, 
+		VAR_LANGS, 
+		langCode,
+		ADDON_CATALOG,
+		addonLangFile
+	);
+	
+	return langFilePath;
+}
+
 export async function getTranslatesPath(workspaceRoot: string | undefined, addon: string) {
 
 	if (!workspaceRoot) {

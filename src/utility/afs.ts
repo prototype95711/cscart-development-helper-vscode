@@ -3,6 +3,7 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as mkdirp from 'mkdirp';
 
 function handleResult<T>(resolve: (result: T) => void, reject: (error: Error) => void, error: Error | null | undefined, result: T): void {
 	if (error) {
@@ -60,5 +61,11 @@ export function readdir(path: string): Promise<string[]> {
 export function unlink(path: string): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		fs.unlink(path, error => handleResult(resolve, reject, error, void 0));
+	});
+}
+
+export function mkdir(path: string): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		mkdirp.default(path, error => handleResult(resolve, reject, error, void 0));
 	});
 }

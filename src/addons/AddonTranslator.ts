@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { Addon } from "./AddonExplorer";
-import { VAR_CATALOG, VAR_LANGS, VAR_LANG_FILE_EXTENSION, getTranslatesPath } from "./AddonFiles";
+import { VAR_CATALOG, VAR_LANGS, VAR_LANG_FILE_EXTENSION, getTranslateFilePath, getTranslatesPath } from "./AddonFiles";
 import { AddonPath } from "./AddonPath";
 import * as afs from '../utility/afs';
-import { DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../utility/languages";
+import { BASE_LANGUAGE, DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../utility/languages";
 import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
 
 export class AddonTranslator {
@@ -14,11 +15,14 @@ export class AddonTranslator {
     private headers: Array<[string, { [headerName: string]: string }]> 
         = new Array<[string, { [headerName: string]: string }]>();
 
+    private _onDidSaveTranslateFiles: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    readonly onDidSaveTranslateFiles: vscode.Event<void> = this._onDidSaveTranslateFiles.event;
+
     constructor(public workspaceRoot: string, public addon: Addon) {
 	}
 
     public async translate() {
-        await this.selectLanguages();
+        await this.getLanguagesPicker();
 		const addonTranslatesPath = await getTranslatesPath(
             this.workspaceRoot, 
             this.addon.label
@@ -29,25 +33,26 @@ export class AddonTranslator {
         }
 	}
 
-    public async selectLanguages() {
+    public async getLanguagesPicker() {
         const langPick = vscode.window.createQuickPick();
         langPick.canSelectMany = true;
         langPick.items = getLanguagePickerList(this.selectedLanguages);
         langPick.selectedItems = langPick.items.filter(item => item.picked);
 
         langPick.onDidChangeSelection(selection => {
-            if (selection) {
-                this.selectLanguage(selection);
+            if (selection?.length > 0) {
+                this.selectLanguages(selection);
             }
         });
-        langPick.onDidAccept(accepted => {
+        langPick.onDidAccept(async accepted => {
             langPick.hide();
+            await this.save();
         });
         langPick.onDidHide(() => langPick.dispose());
         langPick.show();
     }
 
-    public async selectLanguage(selected: readonly vscode.QuickPickItem[]) {
+    public async selectLanguages(selected: readonly vscode.QuickPickItem[]) {
         this.selectedLanguages = [DEFAULT_LANGUAGE];
         selected.map(
             lang_code => {
@@ -59,9 +64,88 @@ export class AddonTranslator {
     }
 
     public async save() {
-        if (this.langvars.length > 0) {
-            
+        if (!this.selectedLanguages?.length) {
+            return;
         }
+
+        await Promise.all(
+            this.selectedLanguages.map(
+                async sl => {
+                    var charset = this.charset.find(cs => cs[0] === sl)?.[1];
+                    var header = this.headers.find(cs => cs[0] === sl)?.[1];
+
+                    if (charset === undefined) {
+                        charset = 'UTF-8';
+                    }
+
+                    if (header === undefined) {
+                        header = this.getDefaultHeader(sl);
+                    }
+
+                    var langFile: GetTextTranslations = {
+                        charset: charset,
+                        headers: header,
+                        translations: this.getTranslations(sl)
+                    };
+
+                    var buf = po.compile(langFile, {sort: function (a: GetTextTranslation, b: GetTextTranslation) {
+                        if (!a?.msgctxt) {
+                            return 1;
+                        } else if (!b?.msgctxt) {
+                            return -1;
+                        }
+
+                        if (a?.msgctxt.includes('Addons::')) {
+
+                            if (a?.msgctxt.includes('name::')) {
+                                return -1;
+                            }
+                            
+                            if (b?.msgctxt.includes('Addons::')) {
+                                return 0;
+                            }
+
+                            return -1;
+
+                        } else if (b?.msgctxt.includes('Addons::')) {
+                            return 1;
+                        }
+                        
+                        if (a?.msgctxt.includes('SettingsSections::')) {
+                            return b?.msgctxt.includes('SettingsSections::') ? 0 : -1;
+
+                        } else if (b?.msgctxt.includes('SettingsSections::')) {
+                            return 1;
+                        }
+
+                        if (a?.msgctxt.includes('SettingsOptions::')) {
+                            return b?.msgctxt.includes('SettingsOptions::') ? 0 : -1;
+
+                        } else if (b?.msgctxt.includes('SettingsOptions::')) {
+                            return 1;
+                        }
+
+                        return 0;
+                    }});
+
+                    const langFileName = getTranslateFilePath(this.workspaceRoot, this.addon.label, sl);
+                    
+                    if (langFileName) {
+
+                        const dirname = path.dirname(langFileName);
+                        const exists = await afs.exists(dirname);
+
+                        if (!exists) {
+                            await afs.mkdir(dirname);
+                        }
+
+                        await afs.writeFile(langFileName, buf);
+                    }
+                }
+            )
+        );
+
+        this._onDidSaveTranslateFiles.fire();
     }
 
     async parseTranslateFiles(translatesPath: AddonPath[]) {
@@ -135,6 +219,7 @@ export class AddonTranslator {
         for (const data in langvar_data) {
             const _langvar_value_data: LangVarValue = { 
                 lang_code: lang_code,
+                id: langvar_data[data].msgid ?? lang_code,
                 value: langvar_data[data]?.msgstr ?? '',
                 plural: langvar_data[data]?.msgid_plural ?? '',
                 comments: langvar_data[data].comments
@@ -169,6 +254,79 @@ export class AddonTranslator {
             _langvar => _langvar[0] === langvar
         );
     }
+
+    private getDefaultHeader(lang_code: string) : { [headerName: string]: string } {
+        const lang_obj = languages.find(l => l.value === lang_code);
+        var header: { [headerName: string]: string } = {
+            'Project-Id-Version': 'tygh',
+            'Content-Type': 'text/plain; charset=UTF-8',
+            'Language-Team': lang_obj?.name ?? 'English',
+            'Language': lang_obj?.code ?? 'en_US'
+        };
+
+        return header;
+    }
+
+    private getTranslations(lang_code: string) : { [msgctxt: string]: { [msgId: string]: GetTextTranslation } } {
+        var translations: { [msgctxt: string]: { [msgId: string]: GetTextTranslation } } = {
+
+        };
+        
+        this.langvars.map(
+            langvar => {
+                var _langvar = langvar[1].values.find(vl => {return vl.lang_code === lang_code;});
+                var default_langvar = langvar[1].values.find(vl => {return vl.lang_code === DEFAULT_LANGUAGE;});
+
+                if (_langvar === undefined && default_langvar === undefined) {
+                    default_langvar = langvar[1].values.find(vl => {return vl.lang_code === BASE_LANGUAGE;});
+
+                    if (default_langvar === undefined) {
+                        default_langvar = langvar[1].values.find(vl => {return vl.lang_code?.length > 0;});
+
+                        if (default_langvar === undefined) {
+                            return;
+                        }
+                    }
+
+                    _langvar = default_langvar;
+
+                } else if (_langvar === undefined && default_langvar !== undefined) {
+                    _langvar = default_langvar;
+                    _langvar.value = [default_langvar.id];
+                } else if (default_langvar === undefined && _langvar !== undefined ) {
+                    default_langvar = _langvar;
+                    default_langvar.value = [_langvar.id];
+                }
+
+                if (_langvar === undefined && default_langvar === undefined) {
+                    return;
+                }
+                
+                var val = _langvar?.value;
+                var _id = default_langvar?.id ?? default_langvar?.value?.[0];
+
+                if (val === undefined && _id !== undefined) {
+                    val = [_id];
+                }
+
+                if (_id === undefined || val === undefined) {
+                    return;
+                }
+
+                var translation: GetTextTranslation = {
+                    msgid: _id,
+                    msgctxt: langvar[0],
+                    msgstr: val,
+                    msgid_plural: _langvar?.plural,
+                    comments: _langvar?.comments
+                };
+
+                translations[langvar[0]] = {_id: translation};
+            }
+        );
+
+        return translations;
+    }
 }
 
 interface LangVar {
@@ -178,6 +336,7 @@ interface LangVar {
 
 interface LangVarValue {
     lang_code: string;
+    id: string,
     value: string[],
     plural: string,
     comments: GetTextComment | undefined
