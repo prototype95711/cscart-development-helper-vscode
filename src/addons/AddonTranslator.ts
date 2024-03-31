@@ -69,18 +69,12 @@ export class AddonTranslator {
             return;
         }
 
-        await Promise.all(
-            this.selectedLanguages.map(
-                async sl => {
-                    await this.translateLangVarsForLanguage(sl);
-                }
-            )
-        );
-
-        console.log(this.langvars);
+        for (const sl of this.selectedLanguages) {
+            await this.translateLangVarsForLanguage(sl);
+        }
     }
 
-    protected async translateLangVarsForLanguage(lang_code: string) {
+    protected async translateLangVarsForLanguage(lang_code: string): Promise<void> {
         var toTranslate = this.langvars.filter(
             lv => {
                 const index = lv[1].values.findIndex(v => {
@@ -88,94 +82,74 @@ export class AddonTranslator {
                 });
                 const isExist = index >= 0;
 
-                return !isExist || !lv[1].values[index].value?.length;
+                return !isExist;
             }
         );
-
-        if (toTranslate.length > 0) {
-            var translateStrings: string[] = [];
-            var varsKeys: number[] = [];
-
-            var key = 0;
-            toTranslate.map(
-                lv => {
-                    lv[1].values.map(v => {
-                        v.value.map (
-                            val => {
-                                const _key = translateStrings.indexOf(val);
-
-                                if (val.trim()) {
-                                    if (_key === -1) {
-                                        varsKeys[key] = translateStrings.push(
-                                            val
-                                        );
-                                    } else {
-                                        varsKeys[key] = _key;
-                                    }
-                                }
-
-                                key ++;
-                            }
-                        );
-                    });
-                }
-            );
-            
-            var translate = require("translate-google-fixed-api");
-
-            try {
-                const result = await translate(translateStrings, {
-                    tld: "ru",
-                    to: lang_code
-                });
-
-                if (result?.length > 0) {
-                    key = 0;
-                    toTranslate = toTranslate.map(
-                        tt => {
-                            tt[1].values = tt[1].values.map(v => {
-                                var newValue: LangVarValue = v;
-                                newValue.lang_code = lang_code;
-                                newValue.value = v.value.map(
-                                    val => {
-                                        if (varsKeys?.[key]) {
-                                            
-                                            if (result?.[varsKeys[key] - 1]) {
-                                                val = result[varsKeys[key] - 1];
-                                            }
-                                        }
         
-                                        key ++;
+        if (!toTranslate?.length) {
+            return;
+        }
 
-                                        return val;
-                                    }
-                                );
+        var translateStrings: string[] = [];
+        var varsKeys: number[] = [];
 
-                                return newValue;
-                            });
+        var key = 0;
+        toTranslate.map(
+            lv => {
+                var valWithId = lv[1].values.find(v => {return v.id.trim();});
 
-                            return tt;
-                        }
-                    );
-                }
+                if (valWithId) {
+                    const _key = translateStrings.indexOf(valWithId.id);
 
-            } catch (e) {
-                
-            }
-
-            toTranslate.map(
-                tt => {
-                    var index = this.langvars.findIndex(
-                        lv => {return lv[1].id === tt[1].id;}
-                    );
-
-                    if (index >= 0) {
-                        this.langvars[index][1].values = this.langvars[index][1].values.concat(
-                            tt[1].values.filter(v => {return v.lang_code === lang_code;})
+                    if (_key === -1) {
+                        varsKeys[key] = translateStrings.push(
+                            valWithId.id
                         );
                     }
                 }
-            );
+
+                key ++;
+            }
+        );
+        
+        var translate = require("translate-google-fixed-api");
+
+        try {
+            const result = await translate(translateStrings, {
+                tld: "ru",
+                to: lang_code
+            });
+
+            if (result?.length > 0) {
+                key = 0;
+                toTranslate = toTranslate.map(
+                    lv => {
+
+                        if (varsKeys?.[key] !== undefined) {
+                            var _key = varsKeys?.[key] - 1;
+
+                            if (result?.[_key] !== undefined) {
+                                var newValue: LangVarValue = {
+                                    lang_code: lang_code,
+                                    id: translateStrings[_key],
+                                    value: [result[_key]],
+                                    plural: '',
+                                    comments : undefined
+                                };
+                                
+                                lv[1].values.push(newValue);
+                            }
+                        }
+
+                        key ++;
+
+                        return lv;
+                    }
+                );
+            }
+
+        } catch (e) {
+            
         }
     }
 

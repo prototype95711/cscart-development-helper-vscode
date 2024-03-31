@@ -470,7 +470,17 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return _.writefile(uri.fsPath, content as Buffer);
 	}
 
-	delete(uri: vscode.Uri, options: { recursive: boolean; }): void | Thenable<void> {
+	async _delete(uri: vscode.Uri, options: { recursive: boolean; }): Promise<boolean | void> {
+		if (options.recursive) {
+			var action = rimraf.rimraf(uri.path);
+
+			return action;
+		}
+
+		return _.unlink(uri.fsPath);
+	}
+
+	delete(uri: vscode.Uri, options: { recursive: boolean; }): Thenable<void> {
 		if (options.recursive) {
 			return _.rmrf(uri.fsPath);
 		}
@@ -1049,13 +1059,21 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			vscode.l10n.t("Cancel")
 		).then(async answer => {
 			if (answer === vscode.l10n.t("Delete")) {
-				uris.map(
-					async uri => await this.delete(
-						uri, 
-						{recursive: true}
-					)
-				);
-				this.refresh();
+				const explorer = this;
+
+				try {
+					for (const uri of uris) {
+						var deleted = this._delete(
+							uri, 
+							{recursive: true}
+						);
+						deleted.finally(function() {
+							explorer.refresh();
+						});
+					}
+				} catch (e) {
+					console.log(e);
+				}
 			}
 		});
 	}
