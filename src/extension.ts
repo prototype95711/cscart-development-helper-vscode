@@ -12,6 +12,7 @@ import path from 'path';
 import * as afs from './utility/afs';
 
 import { AddonsConfiguration, CONFIGURATION_FILE } from './addons/config/addonsConfiguration';
+import { anyEvent, filterEvent, relativePath } from './utility/events';
 
 let disposables: vscode.Disposable[] = [];
 
@@ -142,29 +143,28 @@ export async function activate(context: vscode.ExtensionContext) {
 			(resource) => addonExplorer.deleteCommand(resource)
 		));
 
-		context.subscriptions.push(vscode.workspace.onDidCreateFiles(e => {
-			try {
-				addonExplorer.refresh();
-			} catch (ex) {
+		const repositoryWatcher = vscode.workspace.createFileSystemWatcher(
+			new vscode.RelativePattern(vscode.Uri.file(rootPath), '**')
+		);
+		context.subscriptions.push(repositoryWatcher);
 
-			}
-		}));
+		const onRepositoryFileChange = anyEvent(
+			repositoryWatcher.onDidChange, 
+			repositoryWatcher.onDidCreate, 
+			repositoryWatcher.onDidDelete
+		);
+		const onRepositoryWorkingTreeFileChange = filterEvent(
+			onRepositoryFileChange, uri => !/\.git($|\\|\/)/.test(
+				relativePath(
+					rootPath, uri.fsPath
+				)
+			)
+		);
 
-		context.subscriptions.push(vscode.workspace.onDidDeleteFiles(e => {
-			try {
-				addonExplorer.refresh();
-			} catch (ex) {
-
-			}
-		}));
-
-		context.subscriptions.push(vscode.workspace.onDidRenameFiles(e => {
-			try {
-				addonExplorer.refresh();
-			} catch (ex) {
-
-			}
-		}));
+		const onFileChange = anyEvent(onRepositoryWorkingTreeFileChange);
+		context.subscriptions.push(
+			onFileChange(e => {addonExplorer.refresh();})
+		);
 
 		context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(e => {
 			try {
