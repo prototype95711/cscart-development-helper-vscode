@@ -142,6 +142,30 @@ export async function activate(context: vscode.ExtensionContext) {
 			(resource) => addonExplorer.deleteCommand(resource)
 		));
 
+		context.subscriptions.push(vscode.workspace.onDidCreateFiles(e => {
+			try {
+				addonExplorer.refresh();
+			} catch (ex) {
+
+			}
+		}));
+
+		context.subscriptions.push(vscode.workspace.onDidDeleteFiles(e => {
+			try {
+				addonExplorer.refresh();
+			} catch (ex) {
+
+			}
+		}));
+
+		context.subscriptions.push(vscode.workspace.onDidRenameFiles(e => {
+			try {
+				addonExplorer.refresh();
+			} catch (ex) {
+
+			}
+		}));
+
 		context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(e => {
 			try {
 				// initialize new source control for manually added workspace folders

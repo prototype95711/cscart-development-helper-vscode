@@ -286,7 +286,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					arguments: [element.uri] 
 				};
 				treeItem.contextValue = 'file';
-			} else if (element.type === vscode.FileType.Directory) {
+			} else if (
+				element.type === vscode.FileType.Directory
+				&& element.uri.path.includes(element.addon)
+			) {
 				treeItem.contextValue = 'folder';
 			}
 
@@ -521,26 +524,34 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return;
 		}
 
+		if (
+			!target 
+			|| target === undefined 
+			|| target instanceof Addon
+			|| !path.dirname(target.uri.path).includes(target.addon)
+		) {
+			return;
+		}
+
 		const treeItems: AddonEntry[] = transferItem.value;
 		let roots = this._getLocalRoots(treeItems);
 		// Remove nodes that are already target's parent nodes
 		roots = roots.filter(r => !this._isChild(this._getTreeElement(r.uri.path), target));
+		
 		if (roots.length > 0) {
 			// Reload parents of the moving elements
 			const parents = roots.map(r => this.getParent(r));
 
-			if (target && target !== undefined && !(target instanceof Addon)) {
-				roots.forEach(
-					r => 
-					{
-						var filename = r.uri.path.split('/').pop();
+			roots.forEach(
+				r => 
+				{
+					var filename = r.uri.path.split('/').pop();
 
-						if (filename !== undefined) {
-							vscode.Uri.file(path.join(target.uri.fsPath, filename));
-						}
+					if (filename !== undefined) {
+						vscode.Uri.file(path.join(target.uri.fsPath, filename));
 					}
-				);
-			}
+				}
+			);
 			
 			roots.forEach(r => this._reparentNode(r, target));
 			this._onDidChangeTreeData.fire(...parents, target);
@@ -550,7 +561,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public async handleDrag(source: AddonEntry[], treeDataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
-		treeDataTransfer.set('application/vnd.code.tree.csAddonExplorer', new vscode.DataTransferItem(source));
+		if (source.length > 0) {
+			source = source.filter(s => {return s.uri.path.includes(s.addon) && !(s instanceof Addon);});
+		}
+
+		if (source.length > 0) {
+			treeDataTransfer.set('application/vnd.code.tree.csAddonExplorer', new vscode.DataTransferItem(source));
+		}
 	}
 
 	// Helper methods
@@ -1019,7 +1036,11 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	public async deleteCommand(target: AddonEntry | vscode.Uri) {
 
-		const targets: AddonEntry[] = this.getCommandTarget(target);
+		var targets: AddonEntry[] = this.getCommandTarget(target);
+
+		targets = targets.filter(target => {
+			return target.uri.path.includes(target.addon);
+		});
 
 		if (targets?.length <= 0) {
 			return;
@@ -1072,7 +1093,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						});
 					}
 				} catch (e) {
-					console.log(e);
 				}
 			}
 		});

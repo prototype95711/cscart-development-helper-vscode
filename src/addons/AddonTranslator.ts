@@ -90,62 +90,62 @@ export class AddonTranslator {
             return;
         }
 
-        var translateStrings: string[] = [];
+        var isDefaultLanguage = lang_code === DEFAULT_LANGUAGE;
+        var translatedStrings: string[] = [];
         var varsKeys: number[] = [];
 
         var key = 0;
-        toTranslate.map(
-            lv => {
+
+        try {
+            var translate = require("translate-google-fixed-api");
+
+            for (var lv of toTranslate) {
                 var valWithId = lv[1].values.find(v => {return v.id.trim();});
 
                 if (valWithId) {
-                    const _key = translateStrings.indexOf(valWithId.id);
+                    const _key = translatedStrings.indexOf(valWithId.id);
 
                     if (_key === -1) {
-                        varsKeys[key] = translateStrings.push(
-                            valWithId.id
-                        );
-                    }
-                }
+                        const result = await translate(valWithId.id, {
+                            tld: "ru",
+                            to: lang_code
+                        });
 
-                key ++;
-            }
-        );
-        
-        var translate = require("translate-google-fixed-api");
+                        if (result?.length > 0) {
+                            const translated = result.join(' ');
 
-        try {
-            const result = await translate(translateStrings, {
-                tld: "ru",
-                to: lang_code
-            });
+                            lv[1].values = lv[1].values.map(
+                                val => {
+                                    val.id = translated;
 
-            if (result?.length > 0) {
-                key = 0;
-                toTranslate = toTranslate.map(
-                    lv => {
+                                    return val;
+                                }
+                            );
 
-                        if (varsKeys?.[key] !== undefined) {
-                            var _key = varsKeys?.[key] - 1;
+                            if (isDefaultLanguage) {
+                                lv[1].values = lv[1].values.map(
+                                    val => {
+                                        val.id = result[_key];
 
-                            if (result?.[_key] !== undefined) {
-                                var newValue: LangVarValue = {
-                                    lang_code: lang_code,
-                                    id: translateStrings[_key],
-                                    value: [result[_key]],
-                                    plural: '',
-                                    comments : undefined
-                                };
-                                
-                                lv[1].values.push(newValue);
+                                        return val;
+                                    }
+                                );
                             }
+
+                            var newValue: LangVarValue = {
+                                lang_code: lang_code,
+                                id: valWithId.id,
+                                value: translated,
+                                plural: '',
+                                comments : undefined
+                            };
+                            
+                            lv[1].values.push(newValue);
                         }
 
-                        key ++;
-
-                        return lv;
+                        translatedStrings.push(valWithId.id);
                     }
-                );
+                }
             }
 
         } catch (e) {
@@ -212,6 +212,20 @@ export class AddonTranslator {
                             return b?.msgctxt.includes('SettingsOptions::') ? 0 : -1;
 
                         } else if (b?.msgctxt.includes('SettingsOptions::')) {
+                            return 1;
+                        }
+
+                        if (a?.msgctxt.includes('Languages::email_template')) {
+                            return b?.msgctxt.includes('Languages::email_template') ? 0 : -1;
+
+                        } else if (b?.msgctxt.includes('Languages::email_template')) {
+                            return 1;
+                        }
+
+                        if (a?.msgctxt.includes('Languages::internal_template')) {
+                            return b?.msgctxt.includes('Languages::internal_template') ? 0 : -1;
+
+                        } else if (b?.msgctxt.includes('Languages::internal_template')) {
                             return 1;
                         }
 
