@@ -69,12 +69,16 @@ export class AddonTranslator {
                 if (findedLangVars?.length > 0) {
                     this.addLangVars(findedLangVars);
                 }
+
+                progress.report({ increment: 20, message: vscode.l10n.t("Normalization of lang vars...") });
+
+                await this.normalizeLangVars();
     
-                progress.report({ increment: 20, message: vscode.l10n.t("Translating lang vars...") });
+                progress.report({ increment: 30, message: vscode.l10n.t("Translating lang vars...") });
 
                 await this.translateLangVars();
     
-                progress.report({ increment: 30, message: vscode.l10n.t("Saving translation files...") });
+                progress.report({ increment: 40, message: vscode.l10n.t("Saving translation files...") });
 
                 await this.save();
     
@@ -110,6 +114,30 @@ export class AddonTranslator {
         }
 
         return set;
+    }
+
+    protected async normalizeLangVars() {
+        if (!this.langvars?.length) {
+            return;
+        }
+
+        this.langvars = this.langvars.map(
+            lv => {
+                if (lv[1].values.length > 0) {
+                    lv[1].values = lv[1].values.map(
+                        lvv => {
+                            if (!lvv.id.trim() && lvv.value.length > 0) {
+                                lvv.id = lvv.value[0];
+                            }
+
+                            return lvv;
+                        }
+                    );
+                }
+
+                return lv;
+            }
+        );
     }
 
     protected async translateLangVars() {
