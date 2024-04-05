@@ -58,13 +58,25 @@ export class AddonReader {
 		}
 	}
 
-	async getAddonPathes(addon: string, offset:number = 0, currentPath:string = ''): Promise<AddonPath[]> {
+	async getAddonPathes(
+		addon: string, 
+		offset: number = 0, 
+		currentPath: string = '', 
+		options: IGetAddonPathesOptions = {}
+	): Promise<AddonPath[]> {
 		const addonPath = [(await getAddonPath(this.addonsPath, addon))];
 		const addonDesignPathes = (await getAddonDesignPathes(this.workspaceRoot, addon));
 		const addonJsPath = [(await getAddonJsPath(this.workspaceRoot, addon))];
-		const addonTranslatesPath = (await getTranslatesPath(this.workspaceRoot, addon));
+		var addonTranslatesPath = null;
+
+		if (!options?.skipTranslatesPath) {
+			addonTranslatesPath = (await getTranslatesPath(this.workspaceRoot, addon));
+		}
 		
-		const pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(_path => _path && pathExists(_path.path));
+		const pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(
+			_path => _path 
+			&& pathExists(_path.path)
+		);
 
 		const addonPathes = pathes.map(_path => { 
 			return this.getAddonPath(_path, offset, currentPath);
@@ -77,7 +89,7 @@ export class AddonReader {
 		return Promise.resolve(addonPathes.filter(_path => _path && _path.path).filter(onlyUnique));
 	}
 
-	getAddonPath(_path: AddonPath | null, offset:number = 0, currentPath:string = ''): AddonPath {
+	getAddonPath(_path: AddonPath | null, offset: number = 0, currentPath: string = ''): AddonPath {
 		const _addonPath = new AddonPath(
 			'',
 			vscode.FileType.Unknown
@@ -93,10 +105,14 @@ export class AddonReader {
 		const pathes = [];
 		const _distPath = _path.path.replace(this.workspaceRoot, '');
 		const pieces = _distPath.split('/').filter(dir => dir);
-		const nextFolderKey = offset === -1 ? 0 : offset + 1;
+		var nextFolderKey = offset === -1 ? 0 : offset + 1;
 
 		if (pieces.length <= nextFolderKey) {
 			return _addonPath;
+		}
+
+		if (offset === -2) {
+			nextFolderKey = pieces.length - 1;
 		}
 
 		for (let k = 0; k <= nextFolderKey; k++) {
@@ -108,4 +124,8 @@ export class AddonReader {
 
 		return _addonPath;
 	}
+}
+
+export interface IGetAddonPathesOptions {
+	skipTranslatesPath?: boolean | undefined
 }

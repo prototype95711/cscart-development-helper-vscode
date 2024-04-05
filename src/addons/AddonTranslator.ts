@@ -6,8 +6,11 @@ import { AddonPath } from "./AddonPath";
 import * as afs from '../utility/afs';
 import { BASE_LANGUAGE, DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../utility/languages";
 import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
+import { AddonReader } from './AddonReader';
+import { LangVarsFinder } from './LangVarsFinder';
 
 export class AddonTranslator {
+    private parsedSelectedLanguages: string[] = [];
     private selectedLanguages: string[] = [DEFAULT_LANGUAGE];
     private charset: Array<[string, string]> = new Array<[string, string]>();
     private langvars: Array<[string, LangVar]> = new Array<[string, LangVar]>();
@@ -18,25 +21,25 @@ export class AddonTranslator {
     private _onDidSaveTranslateFiles: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
     readonly onDidSaveTranslateFiles: vscode.Event<void> = this._onDidSaveTranslateFiles.event;
 
-    constructor(public workspaceRoot: string, public addon: Addon) {
+    constructor(private addonReader: AddonReader, public addon: Addon) {
 	}
 
     public async translate() {
-        await this.getLanguagesPicker();
 		const addonTranslatesPath = await getTranslatesPath(
-            this.workspaceRoot, 
+            this.addonReader.workspaceRoot, 
             this.addon.label
         );
         
         if (addonTranslatesPath?.length > 0) {
             await this.parseTranslateFiles(addonTranslatesPath);
+            await this.getLanguagesPicker();
         }
 	}
 
     public async getLanguagesPicker() {
         const langPick = vscode.window.createQuickPick();
         langPick.canSelectMany = true;
-        langPick.items = getLanguagePickerList(this.selectedLanguages);
+        langPick.items = getLanguagePickerList(this.getDefaultSelectedSet());
         langPick.selectedItems = langPick.items.filter(item => item.picked);
 
         langPick.onDidChangeSelection(selection => {
@@ -46,8 +49,41 @@ export class AddonTranslator {
         });
         langPick.onDidAccept(async accepted => {
             langPick.hide();
-            await this.translateLangVars();
-            await this.save();
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: vscode.l10n.t("Translating addon"),
+                cancellable: false
+            }, async (progress, token) => {
+                token.onCancellationRequested(() => {
+                   
+                });
+    
+                progress.report({ increment: 0 });
+                
+                progress.report({ increment: 10, message: vscode.l10n.t("Search Langvars in addon files...") });
+
+                const langVarsFinder = new LangVarsFinder(this.addonReader, this.addon.label);
+                const findedLangVars = await langVarsFinder.findLangVarsInAddonFiles();
+
+                if (findedLangVars?.length > 0) {
+                    this.addLangVars(findedLangVars);
+                }
+    
+                progress.report({ increment: 20, message: vscode.l10n.t("Translating lang vars...") });
+
+                await this.translateLangVars();
+    
+                progress.report({ increment: 30, message: vscode.l10n.t("Saving translation files...") });
+
+                await this.save();
+    
+                const p = new Promise<void>(resolve => {
+                    resolve();
+                });
+    
+                return p;
+            });  
         });
         langPick.onDidHide(() => langPick.dispose());
         langPick.show();
@@ -62,6 +98,18 @@ export class AddonTranslator {
                 }
             }
         );
+    }
+
+    protected getDefaultSelectedSet(): string[] {
+        var set: string[] = [DEFAULT_LANGUAGE];
+
+        if (this.parsedSelectedLanguages.length > 0) {
+            this.parsedSelectedLanguages.map(sl => {
+                set.push(sl);
+            });
+        }
+
+        return set;
     }
 
     protected async translateLangVars() {
@@ -92,9 +140,6 @@ export class AddonTranslator {
 
         var isDefaultLanguage = lang_code === DEFAULT_LANGUAGE;
         var translatedStrings: string[] = [];
-        var varsKeys: number[] = [];
-
-        var key = 0;
 
         try {
             var translate = require("translate-google-fixed-api");
@@ -125,7 +170,7 @@ export class AddonTranslator {
                             if (isDefaultLanguage) {
                                 lv[1].values = lv[1].values.map(
                                     val => {
-                                        val.id = result[_key];
+                                        val.id = translated;
 
                                         return val;
                                     }
@@ -232,7 +277,7 @@ export class AddonTranslator {
                         return 0;
                     }});
 
-                    const langFileName = getTranslateFilePath(this.workspaceRoot, this.addon.label, sl);
+                    const langFileName = getTranslateFilePath(this.addonReader.workspaceRoot, this.addon.label, sl);
                     
                     if (langFileName) {
 
@@ -253,8 +298,10 @@ export class AddonTranslator {
     }
 
     async parseTranslateFiles(translatesPath: AddonPath[]) {
+        this.parsedSelectedLanguages = [];
         const varLangs = VAR_CATALOG.concat('/', VAR_LANGS);
-        await Promise.all(translatesPath.map(async path => {
+        await Promise.all(
+            translatesPath.map(async path => {
                 const isLangFile = path.path.includes(varLangs)
                     && path.path.endsWith(VAR_LANG_FILE_EXTENSION);
                 
@@ -292,6 +339,8 @@ export class AddonTranslator {
                     }
                 }
             }
+
+            this.parsedSelectedLanguages.push(lang_code);
         }
 
         if (data.charset) {
@@ -430,6 +479,30 @@ export class AddonTranslator {
         );
 
         return translations;
+    }
+
+    private addLangVars(langVars: string[]) {
+        langVars.map(langVarId => {
+            const langVarContext = "Languages::" + langVarId;
+            const isExist = this.langvars.findIndex(lv => {
+                return lv[0] === langVarContext;
+            });
+
+            if (isExist === -1) {
+                this.langvars.push([langVarContext, {
+                    id: langVarContext,
+                    values: [
+                        {
+                            lang_code: DEFAULT_LANGUAGE,
+                            id: '',
+                            value: [],
+                            plural: '',
+                            comments: undefined
+                        }
+                    ]
+                }]);   
+            }
+        });
     }
 }
 

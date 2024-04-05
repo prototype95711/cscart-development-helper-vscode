@@ -4,6 +4,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
+import { FileStat } from '../addons/AddonExplorer';
+import path from 'path';
 
 function handleResult<T>(resolve: (result: T) => void, reject: (error: Error) => void, error: Error | null | undefined, result: T): void {
 	if (error) {
@@ -46,6 +48,12 @@ export function writeFile(path: string, content: Buffer): Promise<void> {
 	});
 }
 
+export function stat(path: string): Promise<fs.Stats> {
+	return new Promise<fs.Stats>((resolve, reject) => {
+		fs.stat(path, (error, stat) => handleResult(resolve, reject, error, stat));
+	});
+}
+
 export function exists(path: string): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
 		fs.exists(path, exists => handleResult(resolve, reject, null, exists));
@@ -68,4 +76,21 @@ export function mkdir(path: string): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		mkdirp.default(path, error => handleResult(resolve, reject, error, void 0));
 	});
+}
+
+export async function readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+	const children = await readdir(uri.fsPath);
+
+	const result: [string, vscode.FileType][] = [];
+	for (let i = 0; i < children.length; i++) {
+		const child = children[i];
+		const stat = await getStat(path.join(uri.fsPath, child));
+		result.push([child, stat.type]);
+	}
+
+	return Promise.resolve(result);
+}
+
+export async function getStat(path: string): Promise<vscode.FileStat> {
+	return new FileStat(await stat(path));
 }

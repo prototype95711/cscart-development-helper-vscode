@@ -811,8 +811,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	public async translateAddon(resource: Addon) {
 		const addonTranslator = new AddonTranslator(
-			this.addonReader.workspaceRoot,
-			resource
+			this.addonReader,
+			resource,
 		);
 		const explorer = this;
 		addonTranslator.onDidSaveTranslateFiles(function() {
