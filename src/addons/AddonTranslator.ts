@@ -32,8 +32,9 @@ export class AddonTranslator {
         
         if (addonTranslatesPath?.length > 0) {
             await this.parseTranslateFiles(addonTranslatesPath);
-            await this.getLanguagesPicker();
         }
+
+        await this.getLanguagesPicker();
 	}
 
     public async getLanguagesPicker() {
@@ -47,6 +48,7 @@ export class AddonTranslator {
                 this.selectLanguages(selection);
             }
         });
+        
         langPick.onDidAccept(async accepted => {
             langPick.hide();
 

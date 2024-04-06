@@ -49,10 +49,9 @@ export class LangVarsFinder {
                         ));
 
                     } else if (children[1] === vscode.FileType.File) {
-
                         const exIndex = fileExtensionsWithLangvars.findIndex(
                             ex => {
-                                return uri.fsPath.toLowerCase().includes(ex);
+                                return children[0].includes(ex);
                             }
                         );
 

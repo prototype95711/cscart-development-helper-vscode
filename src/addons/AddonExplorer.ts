@@ -5,17 +5,13 @@ import * as mkdirp from 'mkdirp';
 import * as rimraf from 'rimraf';
 
 import { AddonReader } from './AddonReader';
-import { File } from 'buffer';
 import { ClipboardService } from '../utility/clipboardService';
 import { IClipboardService } from '../utility/IClipboardService';
 import { isEqual, isEqualOrParent, rtrim } from '../utility/strings';
-import { posix, win32 } from 'path/posix';
+import { posix } from 'path/posix';
 import { ResourceFileEdit } from '../utility/resourceFileEdit';
-import { IProgressCompositeOptions, IProgressNotificationOptions } from '../utility/progress';
 import { AddonsConfiguration, CONFIGURATION_FILE } from './config/addonsConfiguration';
 import { AddonTranslator } from './AddonTranslator';
-
-const NO_SELECTED_ADDONS_ERROR = 'Not selected addons for work';
 
 namespace _ {
 
