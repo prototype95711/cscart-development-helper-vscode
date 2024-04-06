@@ -805,17 +805,27 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
+	public async normalizeTranslateFiles(resource: Addon) {
+		const addonTranslator = this.initAddonTranslateFile(resource);
+		await addonTranslator.normalize();
+	}
+
 	public async translateAddon(resource: Addon) {
+		const addonTranslator = this.initAddonTranslateFile(resource);
+		await addonTranslator.translate();
+	}
+
+	private initAddonTranslateFile(resource: Addon) : AddonTranslator {
 		const addonTranslator = new AddonTranslator(
 			this.addonReader,
-			resource,
+			resource
 		);
 		const explorer = this;
 		addonTranslator.onDidSaveTranslateFiles(function() {
 			explorer.refresh();
 		});
 
-		await addonTranslator.translate();
+		return addonTranslator;
 	}
 
 	public async newFile(resource: AddonEntry | vscode.Uri) {

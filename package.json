@@ -35,6 +35,10 @@
         }
       },
       {
+        "command": "csAddonExplorer.normalizeLangVars",
+        "title": "Normalize translate files..."
+      },
+      {
         "command": "csAddonExplorer.translateAddon",
         "title": "Translate..."
       },
@@ -124,6 +128,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "csAddonExplorer.normalizeLangVars",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "navigation@1"
+        },
         {
           "command": "csAddonExplorer.translateAddon",
           "when": "view == csAddonExplorer && viewItem == addon",

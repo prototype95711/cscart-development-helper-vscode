@@ -71,6 +71,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(view);
 
 		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.normalizeLangVars', 
+			(resource) => addonExplorer.normalizeTranslateFiles(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.translateAddon', 
 			(resource) => addonExplorer.translateAddon(resource)
 		));

@@ -24,8 +24,16 @@ export class AddonTranslator {
     constructor(private addonReader: AddonReader, public addon: Addon) {
 	}
 
+    public async normalize() {
+		this.init(false);
+	}
+
     public async translate() {
-		const addonTranslatesPath = await getTranslatesPath(
+		this.init(true);
+	}
+
+    public async init(needTranslate: boolean) {
+        const addonTranslatesPath = await getTranslatesPath(
             this.addonReader.workspaceRoot, 
             this.addon.label
         );
@@ -34,10 +42,10 @@ export class AddonTranslator {
             await this.parseTranslateFiles(addonTranslatesPath);
         }
 
-        await this.getLanguagesPicker();
-	}
+        await this.getLanguagesPicker(needTranslate);
+    }
 
-    public async getLanguagesPicker() {
+    public async getLanguagesPicker(needTranslate: boolean) {
         const langPick = vscode.window.createQuickPick();
         langPick.canSelectMany = true;
         langPick.items = getLanguagePickerList(this.getDefaultSelectedSet());
@@ -75,10 +83,11 @@ export class AddonTranslator {
                 progress.report({ increment: 20, message: vscode.l10n.t("Normalization of lang vars...") });
 
                 await this.normalizeLangVars();
-    
-                progress.report({ increment: 30, message: vscode.l10n.t("Translating lang vars...") });
 
-                await this.translateLangVars();
+                if (needTranslate) {
+                    progress.report({ increment: 30, message: vscode.l10n.t("Translating lang vars...") });
+                    await this.translateLangVars();
+                }
     
                 progress.report({ increment: 40, message: vscode.l10n.t("Saving translation files...") });
 
@@ -126,10 +135,40 @@ export class AddonTranslator {
         this.langvars = this.langvars.map(
             lv => {
                 if (lv[1].values.length > 0) {
+                    var commonId: string = '';
+
+                    for (const lvv of lv[1].values) {
+                        var existId = lvv.id.trim()?.length > 0;
+
+                        if (existId) {
+                            commonId = lvv.id;
+
+                            if (lvv.lang_code === DEFAULT_LANGUAGE) {
+                                break;
+                            }
+                        } 
+                    }
+
+                    const existCommonId = commonId.trim()?.length > 0;
+
                     lv[1].values = lv[1].values.map(
                         lvv => {
-                            if (!lvv.id.trim() && lvv.value.length > 0) {
-                                lvv.id = lvv.value[0];
+                            var existId = lvv.id.trim()?.length > 0;
+                            const existVal = lvv.value.findIndex(
+                                v => {return v.trim()?.length > 0;}
+                            ) > -1;
+
+                            if (existId && !existVal) {
+                                lvv.value = [lvv.id];
+                            } else if (!existId) {
+
+                                if (existCommonId) {
+                                    lvv.id = commonId;
+                                } else if (existVal) {
+                                    lvv.id = lvv.value[0];
+                                }
+
+                                existId = true;
                             }
 
                             return lvv;
@@ -197,7 +236,7 @@ export class AddonTranslator {
                                 }
                             );
 
-                            if (isDefaultLanguage) {
+                            if (isDefaultLanguage && translated.trim()) {
                                 lv[1].values = lv[1].values.map(
                                     val => {
                                         val.id = translated;
