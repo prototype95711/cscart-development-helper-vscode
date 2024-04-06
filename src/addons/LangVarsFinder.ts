@@ -70,7 +70,7 @@ export class LangVarsFinder {
         if (!fileData) {
             return;
         }
-        const regExp = '[_][(][\'"]' + this.addon + '[√\\w.]*[\'"]';
+        const regExp = '(_|(tr))[(][\'"]' + this.addon + '[√\\w.]*[\'"]';
         const options: IPatternInfo = {
             pattern: regExp,
             isRegExp: true
