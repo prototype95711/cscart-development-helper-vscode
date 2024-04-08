@@ -10,11 +10,15 @@ export const ADDON_XML_FILENAME = 'addon.xml';
 export const DESIGN_CATALOG = 'design';
 export const DESIGN_BACKEND_CATALOG = 'backend';
 export const DESIGN_THEMES_CATALOG = 'themes';
+
+export const DESIGN_MAIL_CATALOG = 'mail';
+export const DESIGN_TEMPLATES_CATALOG = 'templates';
+
 export const DESIGN_PARTS = [
 	'css',
-	'mail/templates',
+	DESIGN_MAIL_CATALOG + '/' + DESIGN_TEMPLATES_CATALOG,
 	'media/images',
-	'templates'
+	DESIGN_TEMPLATES_CATALOG
 ];
 export const DESIGN_THEME_MANIFEST_FILENAME = 'manifest.json';
 

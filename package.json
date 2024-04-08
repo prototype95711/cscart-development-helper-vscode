@@ -9,7 +9,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:plaintext"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -19,12 +21,23 @@
           "title": "CS-Cart Addon Explorer",
           "icon": "media/addon.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "cs-overrides-view",
+          "title": "%overrides.title%",
+          "icon": "media/addon.svg"
+        }
       ]
     },
     "commands": [
       {
         "command": "cscart-development-helper.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "csAddonExplorer.findOverrides",
+        "title": "Find Overrides"
       },
       {
         "command": "csAddonExplorer.refreshEntry",
@@ -116,6 +129,13 @@
       }
     ],
     "menus": {
+      "editor/context": [
+				{
+					"command": "csAddonExplorer.findOverrides",
+					"when": "isMayBeCSOverrides",
+					"group": "navigation@1.31"
+				}
+			],
       "view/title": [
         {
           "command": "csAddonExplorer.refreshEntry",
@@ -239,6 +259,16 @@
           "name": "CS-Cart Addons",
           "icon": "media/addon.svg",
           "contextualTitle": "Addons"
+        }
+      ],
+      "cs-overrides-view": [
+        {
+          "id": "csOverridesList",
+          "name": "CS-Cart Overrides List",
+          "icon": "media/addon.svg",
+          "contextualTitle": "Overrides",
+          "visibility": "visible",
+          "when": "isMayBeCSOverrides"
         }
       ]
     }

@@ -13,6 +13,8 @@ import * as afs from './utility/afs';
 
 import { AddonsConfiguration, CONFIGURATION_FILE } from './addons/config/addonsConfiguration';
 import { anyEvent, filterEvent, relativePath } from './utility/events';
+import { OverridesFinder, isOpenedFilesWithOverrides } from './addons/OverridesFinder';
+import { OverridesProvider } from './addons/OverridesProvider';
 
 let disposables: vscode.Disposable[] = [];
 
@@ -69,6 +71,34 @@ export async function activate(context: vscode.ExtensionContext) {
 			addonExplorer.collapseItems(collapsed);
 		});
 		context.subscriptions.push(view);
+		
+		isOpenedFilesWithOverrides();
+
+		context.subscriptions.push(
+			vscode.window.onDidChangeActiveTextEditor(
+				() => isOpenedFilesWithOverrides()
+			)
+		);
+
+		const overridesFinder = new OverridesFinder(addonReader, rootPath);
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.findOverrides', 
+			(resource) => overridesFinder.findOverridesForFile(resource)
+		));
+		const overridesList = new OverridesProvider();
+		const viewOverrides = vscode.window.createTreeView(
+			'csOverridesList', 
+			{ 
+				treeDataProvider: overridesList, 
+				showCollapseAll: true, 
+				canSelectMany: false
+			}
+		);
+		context.subscriptions.push(viewOverrides);
+
+		context.subscriptions.push(vscode.window.onDidChangeTextEditorViewColumn(e => console.log('onDidChangeTextEditorViewColumn')));
+		context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(e => console.log('onDidOpenTextDocument')));
+		context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(e => console.log('onDidCloseTextDocument')));
 
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.normalizeLangVars', 

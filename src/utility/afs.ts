@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
 import { FileStat } from '../addons/AddonExplorer';
 import path from 'path';
+import * as rimraf from 'rimraf';
 
 function handleResult<T>(resolve: (result: T) => void, reject: (error: Error) => void, error: Error | null | undefined, result: T): void {
 	if (error) {
@@ -34,6 +35,20 @@ function massageError(error: Error & { code?: string }): Error {
 	}
 
 	return error;
+}
+
+export function normalizeNFC(items: string): string;
+export function normalizeNFC(items: string[]): string[];
+export function normalizeNFC(items: string | string[]): string | string[] {
+	if (process.platform !== 'darwin') {
+		return items;
+	}
+
+	if (Array.isArray(items)) {
+		return items.map(item => item.normalize('NFC'));
+	}
+
+	return items.normalize('NFC');
 }
 
 export function readFile(path: string): Promise<Buffer> {
@@ -66,6 +81,12 @@ export function readdir(path: string): Promise<string[]> {
 	});
 }
 
+export function readfile(path: string): Promise<Buffer> {
+	return new Promise<Buffer>((resolve, reject) => {
+		fs.readFile(path, (error, buffer) => handleResult(resolve, reject, error, buffer));
+	});
+}
+
 export function unlink(path: string): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		fs.unlink(path, error => handleResult(resolve, reject, error, void 0));
@@ -75,6 +96,24 @@ export function unlink(path: string): Promise<void> {
 export function mkdir(path: string): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		mkdirp.default(path, error => handleResult(resolve, reject, error, void 0));
+	});
+}
+
+export function writefile(path: string, content: Buffer): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		fs.writeFile(path, content, error => handleResult(resolve, reject, error, void 0));
+	});
+}
+
+export function rmrf(path: string): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		rimraf.rimraf(path);
+	});
+}
+
+export function rename(oldPath: string, newPath: string): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		fs.rename(oldPath, newPath, error => handleResult(resolve, reject, error, void 0));
 	});
 }
 

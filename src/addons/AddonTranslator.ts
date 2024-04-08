@@ -160,6 +160,7 @@ export class AddonTranslator {
 
                             if (existId && !existVal) {
                                 lvv.value = [lvv.id];
+                                
                             } else if (!existId) {
 
                                 if (existCommonId) {
