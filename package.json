@@ -126,6 +126,10 @@
       {
         "command": "csAddonExplorer.delete",
         "title": "Delete"
+      },
+      {
+        "command": "overridesProvider.openFile",
+        "title": "Open file"
       }
     ],
     "menus": {

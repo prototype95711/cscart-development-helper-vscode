@@ -2,12 +2,20 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as afs from '../utility/afs';
-import { Addon, FileStat } from './AddonExplorer';
+import { FileStat } from './AddonExplorer';
+import { CSDesignPath } from './OverridesFinder';
+import { Addon, getAddonItem } from './AddonTreeItem';
+import { AddonReader } from './AddonReader';
 
 export class OverridesProvider implements vscode.TreeDataProvider<Addon | OverrideEntry>, vscode.FileSystemProvider {
-    private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
+	private list: CSDesignPath[] = [];
 
-	constructor() {
+    private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
+	
+	private _onDidChangeTreeData: vscode.EventEmitter<Addon | OverrideEntry | undefined | void> = new vscode.EventEmitter<Addon | OverrideEntry | undefined | void>();
+	readonly onDidChangeTreeData: vscode.Event<Addon | OverrideEntry | undefined | void> = this._onDidChangeTreeData.event;
+
+	constructor(private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 	}
 
@@ -114,7 +122,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 		return afs.rename(oldUri.fsPath, newUri.fsPath);
 	}
 
-    async getChildren(element?: Addon | OverrideEntry): Promise<OverrideEntry[]> {
+    async getChildren(element?: Addon | OverrideEntry): Promise<Addon[] | OverrideEntry[]> {
 		if (element instanceof Addon) {
 			return [];
 		}
@@ -122,9 +130,24 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 		if (element) {
 			const children = await this.readDirectory(element.uri);
 			return children.map(([name, type]) => ({ uri: vscode.Uri.file(path.join(element.uri.fsPath, name)), type }));
+
+		} else if (this.list.length > 0) {
+			return this.getAddons();
 		}
 
 		return [];
+	}
+
+	/**
+	 * Given the selected addons
+	 */
+	private getAddons(): Addon[] {
+		var addons: string[] = this.list.map(item => item.addon);
+		const addonObjects: Addon[] = addons.length > 0
+			? addons.map(addon => getAddonItem(addon, this.addonReader))
+			: [];
+
+		return addonObjects;
 	}
 
     getTreeItem(element: Addon | OverrideEntry): vscode.TreeItem {
@@ -141,10 +164,58 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 		);
 		
 		if (element.type === vscode.FileType.File) {
-			treeItem.command = { command: 'fileExplorer.openFile', title: "Open File", arguments: [element.uri], };
+			treeItem.command = { command: 'overridesProvider.openFile', title: vscode.l10n.t("Open File"), arguments: [element.uri], };
 			treeItem.contextValue = 'file';
 		}
 		return treeItem;
+	}
+
+	refresh(): void {
+		this._onDidChangeTreeData.fire();
+	} 
+
+	public async openFile(resource: vscode.Uri) {
+		const activeTextEditor = vscode.window.activeTextEditor;
+		const previousVisibleRange = activeTextEditor?.visibleRanges[0];
+		const previousURI = activeTextEditor?.document.uri;
+		const previousSelection = activeTextEditor?.selection;
+
+		const opts: vscode.TextDocumentShowOptions = {
+			preserveFocus: false,
+			preview: false,
+			viewColumn: vscode.ViewColumn.Active
+		};
+
+		await vscode.commands.executeCommand('vscode.open', resource, {
+			...opts,
+			override: undefined
+		});
+
+		const document = vscode.window.activeTextEditor?.document;
+
+		if (
+			document?.uri.toString() !== resource.toString() 
+			|| !activeTextEditor 
+			|| !previousURI 
+			|| !previousSelection
+		) {
+			return;
+		}
+
+		if (previousURI.path === resource.path && document) {
+			opts.selection = previousSelection;
+			const editor = await vscode.window.showTextDocument(document, opts);
+
+			if (previousVisibleRange) {
+				editor.revealRange(previousVisibleRange);
+			}
+		}
+	}
+
+	public async setList(overridesList: CSDesignPath[]) {
+		this.list = overridesList;
+
+		this.refresh();
 	}
 }
 

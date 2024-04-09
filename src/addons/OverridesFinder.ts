@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as afs from '../utility/afs';
 
 import { AddonReader } from './AddonReader';
-import { DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes } from './AddonFiles';
+import { ADDON_CATALOG, DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes } from './AddonFiles';
 import { readDirectory } from '../utility/afs';
 import path from 'path';
 
@@ -14,9 +14,7 @@ export class OverridesFinder {
     constructor(private addonReader: AddonReader, private workspaceRoot: string) {
 	}
 
-    
-
-    async findOverridesForFile(filepath: any) : Promise<string[]> {
+    async findOverridesForFile(filepath: any) : Promise<CSDesignPath[]> {
         if (
             !(filepath instanceof vscode.Uri) 
             || !filepath.path.includes(fileExtensionWithOverrides)
@@ -24,13 +22,17 @@ export class OverridesFinder {
             return [];
         }
 
-        var overrides: string[] = [];
+        var overrides: CSDesignPath[] = [];
         const addonsList = this.addonReader.getAddons();
 
         if (addonsList?.length > 0) {
-            overrides = await Promise.all(
+            await Promise.all(
                 addonsList.map(async addon => {
-                    return await this.findOverrideInAddon(filepath, addon);
+                    const override = await this.findOverrideInAddon(filepath, addon);
+                    
+                    if (override !== undefined) {
+                        overrides.push(override);
+                    }
                 })
             );
         }
@@ -38,25 +40,24 @@ export class OverridesFinder {
         return overrides;
     }
 
-    async findOverrideInAddon(filepath: vscode.Uri, addon: string) : Promise<string> {
-        const csWorkspaceFilePath = this.toCSDesignPath(filepath.path);
+    async findOverrideInAddon(filepath: vscode.Uri, addon: string) : Promise<CSDesignPath | undefined> {
+        const csWorkspaceFilePath = this.toCSDesignPath(filepath.path, addon);
 
         if (
             csWorkspaceFilePath.path.length < 1 
             || csWorkspaceFilePath.designPath.length < 1
         ) {
-            return '';
+            return undefined;
         }
 
-        const pathToSearch = csWorkspaceFilePath.designPath
-            + '/' + overridesPath
-            + '/' + csWorkspaceFilePath.path;
+        const pathToSearch = path.join(this.workspaceRoot, csWorkspaceFilePath.designPath, ADDON_CATALOG, 
+            addon, overridesPath, csWorkspaceFilePath.path);
 
         if (await afs.exists(pathToSearch)) {
-            return pathToSearch;
+            return csWorkspaceFilePath;
         }
         
-        return '';
+        return undefined;
     }
 
     async findTemplateFilesInFolder(uri: vscode.Uri) : Promise<vscode.Uri[]> {
@@ -90,7 +91,7 @@ export class OverridesFinder {
         return files;
     }
 
-    toCSDesignPath(filepath: string): CSDesignPath {
+    toCSDesignPath(filepath: string, addon: string): CSDesignPath {
         var csFilePath = '', designPath = '';
         var filePath = filepath.replace(this.workspaceRoot + '/', '');
         const parts = filePath.split('/');
@@ -150,6 +151,7 @@ export class OverridesFinder {
         }
 
         return {
+            addon: addon,
             path: csFilePath,
             designPath: designPath
         };
@@ -168,7 +170,8 @@ export function isOpenedFilesWithOverrides() {
     }
 }
 
-interface CSDesignPath {
+export interface CSDesignPath {
+    addon: string,
     path: string,
     designPath: string
 }

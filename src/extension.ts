@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { AddonReader } from './addons/AddonReader';
 
-import { AddonExplorer, Addon, selectAddon } from './addons/AddonExplorer';
+import { AddonExplorer, selectAddon } from './addons/AddonExplorer';
 import { showAddonPicker } from './addons/AddonPicker';
 
 import * as messages from './addons/AddonMessages';
@@ -80,12 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			)
 		);
 
-		const overridesFinder = new OverridesFinder(addonReader, rootPath);
-		context.subscriptions.push(vscode.commands.registerCommand(
-			'csAddonExplorer.findOverrides', 
-			(resource) => overridesFinder.findOverridesForFile(resource)
-		));
-		const overridesList = new OverridesProvider();
+		const overridesList = new OverridesProvider(addonReader);
 		const viewOverrides = vscode.window.createTreeView(
 			'csOverridesList', 
 			{ 
@@ -94,6 +89,21 @@ export async function activate(context: vscode.ExtensionContext) {
 				canSelectMany: false
 			}
 		);
+		const overridesFinder = new OverridesFinder(addonReader, rootPath);
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.findOverrides', 
+			async (resource) => {
+				const overrides = await overridesFinder.findOverridesForFile(resource);
+
+				if (overrides?.length > 0) {
+					overridesList.setList(overrides);
+				}
+			}
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'overridesProvider.openFile', 
+			(resource) => overridesList.openFile(resource)
+		));
 		context.subscriptions.push(viewOverrides);
 
 		context.subscriptions.push(vscode.window.onDidChangeTextEditorViewColumn(e => console.log('onDidChangeTextEditorViewColumn')));

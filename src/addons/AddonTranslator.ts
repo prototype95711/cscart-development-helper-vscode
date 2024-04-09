@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Addon } from "./AddonExplorer";
 import { VAR_CATALOG, VAR_LANGS, VAR_LANG_FILE_EXTENSION, getTranslateFilePath, getTranslatesPath } from "./AddonFiles";
 import { AddonPath } from "./AddonPath";
+import { Addon } from './AddonTreeItem';
 import * as afs from '../utility/afs';
 import { BASE_LANGUAGE, DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../utility/languages";
 import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
@@ -158,11 +158,7 @@ export class AddonTranslator {
                                 v => {return v.trim()?.length > 0;}
                             ) > -1;
 
-                            if (existId && !existVal) {
-                                lvv.value = [lvv.id];
-                                
-                            } else if (!existId) {
-
+                            if (!existId) {
                                 if (existCommonId) {
                                     lvv.id = commonId;
                                 } else if (existVal) {
@@ -196,7 +192,10 @@ export class AddonTranslator {
         var toTranslate = this.langvars.filter(
             lv => {
                 const index = lv[1].values.findIndex(v => {
-                    return v.lang_code === lang_code;
+                    return v.lang_code === lang_code 
+                        && v.id.trim() 
+                        && v.value.length > 0
+                        && v.value.findIndex(val => val.trim().length > 0) > -1;
                 });
                 const isExist = index >= 0;
 
@@ -231,21 +230,17 @@ export class AddonTranslator {
 
                             lv[1].values = lv[1].values.map(
                                 val => {
-                                    val.id = translated;
+                                    if (val.lang_code === lang_code) {
+                                        val.value = [translated];
+                                    }
+
+                                    if (isDefaultLanguage && translated.trim()) {
+                                        val.id = translated;
+                                    }
 
                                     return val;
                                 }
                             );
-
-                            if (isDefaultLanguage && translated.trim()) {
-                                lv[1].values = lv[1].values.map(
-                                    val => {
-                                        val.id = translated;
-
-                                        return val;
-                                    }
-                                );
-                            }
 
                             var newValue: LangVarValue = {
                                 lang_code: lang_code,
@@ -497,10 +492,12 @@ export class AddonTranslator {
         
         this.langvars.map(
             langvar => {
+                var useVarsFromOtherLang = false;
                 var _langvar = langvar[1].values.find(vl => {return vl.lang_code === lang_code;});
                 var default_langvar = langvar[1].values.find(vl => {return vl.lang_code === DEFAULT_LANGUAGE;});
 
                 if (_langvar === undefined && default_langvar === undefined) {
+                    useVarsFromOtherLang = true;
                     default_langvar = langvar[1].values.find(vl => {return vl.lang_code === BASE_LANGUAGE;});
 
                     if (default_langvar === undefined) {
@@ -525,7 +522,7 @@ export class AddonTranslator {
                     return;
                 }
                 
-                var val = _langvar?.value;
+                var val = useVarsFromOtherLang ? [] : _langvar?.value;
                 var _id = default_langvar?.id ?? default_langvar?.value?.[0];
 
                 if (val === undefined && _id !== undefined) {

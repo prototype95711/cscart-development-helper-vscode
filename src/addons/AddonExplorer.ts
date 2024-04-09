@@ -5,6 +5,7 @@ import * as mkdirp from 'mkdirp';
 import * as rimraf from 'rimraf';
 
 import { AddonReader } from './AddonReader';
+import { Addon } from './AddonTreeItem';
 import { ClipboardService } from '../utility/clipboardService';
 import { IClipboardService } from '../utility/IClipboardService';
 import { isEqual, isEqualOrParent, rtrim } from '../utility/strings';
@@ -1728,28 +1729,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		return confirmed;
 	}
-}
-
-export class Addon extends vscode.TreeItem {
-
-	constructor(
-		public readonly label: string,
-		private readonly version: string,
-		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-		public readonly command?: vscode.Command
-	) {
-		super(label, collapsibleState);
-
-		this.tooltip = `${this.label}-${this.version}`;
-		this.description = this.version;
-	}
-
-	iconPath = {
-		light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'addon.svg'),
-		dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'addon.svg')
-	};
-
-	contextValue = 'addon';
 }
 
 export class FileStat implements vscode.FileStat {
