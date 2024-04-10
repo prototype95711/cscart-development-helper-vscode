@@ -8,6 +8,7 @@ import { Addon, getAddonItem } from './AddonTreeItem';
 import { AddonReader } from './AddonReader';
 
 export class OverridesProvider implements vscode.TreeDataProvider<Addon | OverrideEntry>, vscode.FileSystemProvider {
+	private cache: CachedOverridesList[] = [];
 	private list: CSDesignPath[] = [];
 
     private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
@@ -124,14 +125,24 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 
     async getChildren(element?: Addon | OverrideEntry): Promise<Addon[] | OverrideEntry[]> {
 		if (element instanceof Addon) {
-			return [];
+			const overrideFiles = this.list.filter(l => l.addon === element.label);
+			const result: OverrideEntry[] = [];
+
+			if (overrideFiles.length > 0) {
+				overrideFiles.forEach(_path => {
+					const entry: OverrideEntry = { 
+						uri: vscode.Uri.file(_path.fullPath), 
+						type: vscode.FileType.File,
+						csPath: path.join(_path.designPath, path.basename(_path.path))
+					};
+					result.push(entry);
+				});
+			}
+
+			return result;
 		}
 
-		if (element) {
-			const children = await this.readDirectory(element.uri);
-			return children.map(([name, type]) => ({ uri: vscode.Uri.file(path.join(element.uri.fsPath, name)), type }));
-
-		} else if (this.list.length > 0) {
+		if (this.list.length > 0) {
 			return this.getAddons();
 		}
 
@@ -162,9 +173,15 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 				? vscode.TreeItemCollapsibleState.Collapsed 
 				: vscode.TreeItemCollapsibleState.None
 		);
+
+		treeItem.label = element.csPath;
 		
 		if (element.type === vscode.FileType.File) {
-			treeItem.command = { command: 'overridesProvider.openFile', title: vscode.l10n.t("Open File"), arguments: [element.uri], };
+			treeItem.command = { 
+				command: 'overridesProvider.openFile', 
+				title: vscode.l10n.t("Open File"), 
+				arguments: [element.uri]
+			};
 			treeItem.contextValue = 'file';
 		}
 		return treeItem;
@@ -212,8 +229,19 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 		}
 	}
 
-	public async setList(overridesList: CSDesignPath[]) {
-		this.list = overridesList;
+	public async updateList(filepath: string, overridesList: CSDesignPath[]) {
+		this.cache.push({path: filepath, list: overridesList});
+		this.selectList(filepath);
+	}
+
+	public async selectList(filepath: string) {
+		const cached = this.cache.findIndex(c => {return c.path === filepath;});
+
+		if (cached !== -1) {
+			this.list = this.cache[cached].list;
+		} else {
+			this.list = [];
+		}
 
 		this.refresh();
 	}
@@ -222,4 +250,10 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 interface OverrideEntry {
 	uri: vscode.Uri;
 	type: vscode.FileType;
+	csPath: string;
+}
+
+interface CachedOverridesList {
+	path: string;
+	list: CSDesignPath[]
 }

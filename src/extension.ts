@@ -71,14 +71,6 @@ export async function activate(context: vscode.ExtensionContext) {
 			addonExplorer.collapseItems(collapsed);
 		});
 		context.subscriptions.push(view);
-		
-		isOpenedFilesWithOverrides();
-
-		context.subscriptions.push(
-			vscode.window.onDidChangeActiveTextEditor(
-				() => isOpenedFilesWithOverrides()
-			)
-		);
 
 		const overridesList = new OverridesProvider(addonReader);
 		const viewOverrides = vscode.window.createTreeView(
@@ -96,7 +88,13 @@ export async function activate(context: vscode.ExtensionContext) {
 				const overrides = await overridesFinder.findOverridesForFile(resource);
 
 				if (overrides?.length > 0) {
-					overridesList.setList(overrides);
+					const csFilepath = overrides.find(override => {
+						return override.templatePath.trim();
+					})?.templatePath;
+
+					if (csFilepath) {
+						overridesList.updateList(csFilepath, overrides);
+					}
 				}
 			}
 		));
@@ -105,6 +103,25 @@ export async function activate(context: vscode.ExtensionContext) {
 			(resource) => overridesList.openFile(resource)
 		));
 		context.subscriptions.push(viewOverrides);
+
+		isOpenedFilesWithOverrides();
+
+		context.subscriptions.push(
+			vscode.window.onDidChangeActiveTextEditor(
+				() => {
+					isOpenedFilesWithOverrides();
+
+					if (
+						vscode.window.activeTextEditor 
+						&& vscode.window.activeTextEditor.document.uri.scheme === 'file'
+					) {
+						overridesList.selectList(
+							vscode.window.activeTextEditor.document.uri.path
+						);
+					}
+				}
+			)
+		);
 
 		context.subscriptions.push(vscode.window.onDidChangeTextEditorViewColumn(e => console.log('onDidChangeTextEditorViewColumn')));
 		context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(e => console.log('onDidOpenTextDocument')));

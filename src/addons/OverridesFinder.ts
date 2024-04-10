@@ -50,10 +50,16 @@ export class OverridesFinder {
             return undefined;
         }
 
-        const pathToSearch = path.join(this.workspaceRoot, csWorkspaceFilePath.designPath, ADDON_CATALOG, 
-            addon, overridesPath, csWorkspaceFilePath.path);
+        const pathToSearch = path.join(this.workspaceRoot, csWorkspaceFilePath.designPath, 
+            ADDON_CATALOG, addon, overridesPath, csWorkspaceFilePath.path);
 
         if (await afs.exists(pathToSearch)) {
+            csWorkspaceFilePath.fullPath = pathToSearch;
+            csWorkspaceFilePath.templatePath = path.join(
+                this.workspaceRoot, 
+                csWorkspaceFilePath.designPath,
+                csWorkspaceFilePath.path
+            );
             return csWorkspaceFilePath;
         }
         
@@ -153,6 +159,8 @@ export class OverridesFinder {
         return {
             addon: addon,
             path: csFilePath,
+            fullPath: '',
+            templatePath: '',
             designPath: designPath
         };
     }
@@ -165,13 +173,13 @@ export function isOpenedFilesWithOverrides() {
                 .fileName.toLocaleLowerCase().includes(fileExtensionWithOverrides);
             vscode.commands.executeCommand('setContext', 'isMayBeCSOverrides', enabled);
         }
-    } else {
-        vscode.commands.executeCommand('setContext', 'isMayBeCSOverrides', false);
     }
 }
 
 export interface CSDesignPath {
     addon: string,
     path: string,
+    fullPath: string,
+    templatePath: string,
     designPath: string
 }
