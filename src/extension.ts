@@ -117,25 +117,26 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(
 			vscode.window.onDidChangeActiveTextEditor(
 				() => {
-					isOpenedFilesWithOverrides();
-
-					if (
-						vscode.window.activeTextEditor 
-						&& vscode.window.activeTextEditor.document.uri.scheme === 'file'
-					) {
-						overridesList.selectList(
-							filterOverridePathPart(
-								vscode.window.activeTextEditor.document.uri.path
-							)
-						);
-					}
+					refreshOverridesPanelData(overridesList);
 				}
 			)
 		);
 
-		context.subscriptions.push(vscode.window.onDidChangeTextEditorViewColumn(e => console.log('onDidChangeTextEditorViewColumn')));
-		context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(e => console.log('onDidOpenTextDocument')));
-		context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(e => console.log('onDidCloseTextDocument')));
+		context.subscriptions.push(
+			vscode.window.onDidChangeTextEditorViewColumn(
+				() => {
+					refreshOverridesPanelData(overridesList);
+				}
+			)
+		);
+
+		context.subscriptions.push(
+			vscode.workspace.onDidOpenTextDocument(
+				() => {
+					refreshOverridesPanelData(overridesList);
+				}
+			)
+		);
 
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.normalizeLangVars', 
@@ -284,6 +285,21 @@ export function deactivate() {
 		disposables.forEach(item => item.dispose());
 	}
 	disposables = [];
+}
+
+function refreshOverridesPanelData(overridesList: OverridesProvider) {
+	isOpenedFilesWithOverrides();
+
+	if (
+		vscode.window.activeTextEditor 
+		&& vscode.window.activeTextEditor.document.uri.scheme === 'file'
+	) {
+		overridesList.selectList(
+			filterOverridePathPart(
+				vscode.window.activeTextEditor.document.uri.path
+			)
+		);
+	}
 }
 
 async function getDataFromConfigurationFiles(context: vscode.ExtensionContext): Promise<AddonsConfiguration[]> {
