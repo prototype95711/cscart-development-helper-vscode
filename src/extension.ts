@@ -13,7 +13,7 @@ import * as afs from './utility/afs';
 
 import { AddonsConfiguration, CONFIGURATION_FILE } from './addons/config/addonsConfiguration';
 import { anyEvent, filterEvent, relativePath } from './utility/events';
-import { OverridesFinder, isOpenedFilesWithOverrides } from './addons/OverridesFinder';
+import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './addons/OverridesFinder';
 import { OverridesProvider } from './addons/OverridesProvider';
 
 let disposables: vscode.Disposable[] = [];
@@ -73,6 +73,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(view);
 
 		const overridesList = new OverridesProvider(addonReader);
+		vscode.window.registerTreeDataProvider('csOverridesList', overridesList);
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csOverridesList.refreshEntry', () => overridesList.refresh())
+		);
 		const viewOverrides = vscode.window.createTreeView(
 			'csOverridesList', 
 			{ 
@@ -96,6 +100,8 @@ export async function activate(context: vscode.ExtensionContext) {
 						overridesList.updateList(csFilepath, overrides);
 					}
 				}
+
+				vscode.commands.executeCommand("csOverridesList.focus");
 			}
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
@@ -116,7 +122,9 @@ export async function activate(context: vscode.ExtensionContext) {
 						&& vscode.window.activeTextEditor.document.uri.scheme === 'file'
 					) {
 						overridesList.selectList(
-							vscode.window.activeTextEditor.document.uri.path
+							filterOverridePathPart(
+								vscode.window.activeTextEditor.document.uri.path
+							)
 						);
 					}
 				}

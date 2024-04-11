@@ -5,6 +5,7 @@ import { AddonReader } from './AddonReader';
 import { ADDON_CATALOG, DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes } from './AddonFiles';
 import { readDirectory } from '../utility/afs';
 import path from 'path';
+import { Console } from 'console';
 
 const fileExtensionWithOverrides = '.tpl';
 const overridesPath = 'overrides';
@@ -100,6 +101,8 @@ export class OverridesFinder {
     toCSDesignPath(filepath: string, addon: string): CSDesignPath {
         var csFilePath = '', designPath = '';
         var filePath = filepath.replace(this.workspaceRoot + '/', '');
+        
+        filePath = filterOverridePathPart(filePath);
         const parts = filePath.split('/');
 
         if (parts.length >= 4) {
@@ -174,6 +177,18 @@ export function isOpenedFilesWithOverrides() {
             vscode.commands.executeCommand('setContext', 'isMayBeCSOverrides', enabled);
         }
     }
+}
+
+export function filterOverridePathPart(path: string): string {
+    const ovTemplate = new RegExp(
+        "(" + DESIGN_TEMPLATES_CATALOG + "/" + ADDON_CATALOG + "/)[√\\w.]*(/" + overridesPath + "/)"
+    );
+    path = path.replace(
+        ovTemplate, 
+        DESIGN_TEMPLATES_CATALOG + '/'
+    );
+
+    return path;
 }
 
 export interface CSDesignPath {

@@ -1,5 +1,6 @@
 {
 	"command.revealFileInOS.linux": "Open Containing Folder",
 	"command.revealFileInOS.mac": "Reveal in Finder",
-	"command.revealFileInOS.windows": "Reveal in File Explorer"
+	"command.revealFileInOS.windows": "Reveal in File Explorer",
+	"overrides.title": "Overrides"
 }

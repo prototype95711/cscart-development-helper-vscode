@@ -9,7 +9,7 @@ import { AddonReader } from './AddonReader';
 
 export class OverridesProvider implements vscode.TreeDataProvider<Addon | OverrideEntry>, vscode.FileSystemProvider {
 	private cache: CachedOverridesList[] = [];
-	private list: CSDesignPath[] = [];
+	public list: CSDesignPath[] = [];
 
     private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	
