@@ -133,7 +133,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 					const entry: OverrideEntry = { 
 						uri: vscode.Uri.file(_path.fullPath), 
 						type: vscode.FileType.File,
-						csPath: path.join(this.workspaceRoot, _path.designPath, path.basename(_path.path))
+						csPath: _path.fullPath.replace(this.workspaceRoot, '')
 					};
 					result.push(entry);
 				});

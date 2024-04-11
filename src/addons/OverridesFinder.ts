@@ -194,7 +194,7 @@ export function filterOverridePathPart(path: string): string {
 export interface CSDesignPath {
     addon: string,
     path: string,
-    fullPath: string,
-    templatePath: string,
-    designPath: string
+    fullPath: string, 
+    templatePath: string, //original file fullpath
+    designPath: string 
 }
