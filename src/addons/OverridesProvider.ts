@@ -16,7 +16,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 	private _onDidChangeTreeData: vscode.EventEmitter<Addon | OverrideEntry | undefined | void> = new vscode.EventEmitter<Addon | OverrideEntry | undefined | void>();
 	readonly onDidChangeTreeData: vscode.Event<Addon | OverrideEntry | undefined | void> = this._onDidChangeTreeData.event;
 
-	constructor(private addonReader: AddonReader) {
+	constructor(public workspaceRoot: string, private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 	}
 
@@ -125,7 +125,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 
     async getChildren(element?: Addon | OverrideEntry): Promise<Addon[] | OverrideEntry[]> {
 		if (element instanceof Addon) {
-			const overrideFiles = this.list.filter(l => l.addon === element.label);
+			const overrideFiles = this.list.filter(l => l.addon === element.addon);
 			const result: OverrideEntry[] = [];
 
 			if (overrideFiles.length > 0) {
@@ -133,7 +133,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 					const entry: OverrideEntry = { 
 						uri: vscode.Uri.file(_path.fullPath), 
 						type: vscode.FileType.File,
-						csPath: path.join(_path.designPath, path.basename(_path.path))
+						csPath: path.join(this.workspaceRoot, _path.designPath, path.basename(_path.path))
 					};
 					result.push(entry);
 				});
@@ -154,9 +154,32 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 	 */
 	private getAddons(): Addon[] {
 		var addons: string[] = this.list.map(item => item.addon);
-		const addonObjects: Addon[] = addons.length > 0
+		var addonObjects: Addon[] = addons.length > 0
 			? addons.map(addon => getAddonItem(addon, this.addonReader))
 			: [];
+
+		addonObjects = addonObjects.map(a => {
+			if (a.data?.addon?.priority) {
+				a.label += ' ' + vscode.l10n.t("priority:") + ' ' + a.data?.addon?.priority;
+			}
+			return a;
+		});
+
+		addonObjects.sort((a, b) => {
+
+			if (!a.data?.addon?.priority) {
+				return 1;
+				
+			} else if (!b.data?.addon?.priority) {
+				return -1;
+			}
+
+			if (a.data.addon.priority < b.data?.addon?.priority) {
+				return -1;
+			}
+
+			return 0;
+		});
 
 		return addonObjects;
 	}

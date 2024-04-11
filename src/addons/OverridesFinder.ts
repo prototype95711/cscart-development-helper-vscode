@@ -102,8 +102,8 @@ export class OverridesFinder {
         var csFilePath = '', designPath = '';
         var filePath = filepath.replace(this.workspaceRoot + '/', '');
         
-        filePath = filterOverridePathPart(filePath);
-        const parts = filePath.split('/');
+        const sFilePath = filterOverridePathPart(filePath);
+        const parts = sFilePath.split('/');
 
         if (parts.length >= 4) {
             if (

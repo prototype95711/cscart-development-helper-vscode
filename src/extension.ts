@@ -72,7 +72,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 		context.subscriptions.push(view);
 
-		const overridesList = new OverridesProvider(addonReader);
+		const overridesList = new OverridesProvider(rootPath, addonReader);
 		vscode.window.registerTreeDataProvider('csOverridesList', overridesList);
 		context.subscriptions.push(
 			vscode.commands.registerCommand('csOverridesList.refreshEntry', () => overridesList.refresh())

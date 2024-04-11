@@ -9,21 +9,29 @@ export function getAddonItem(
 ): Addon {
     const addonData = addonReader.getAddonData(addon);
 
-    return new Addon(addon, addonData.addon.version, collapsibleState);
+    return new Addon(addon, addonData, collapsibleState);
 }
 
 export class Addon extends vscode.TreeItem {
 
+	public addon: string = '';
+
 	constructor(
-		public readonly label: string,
-		private readonly version: string,
+		public label: string,
+		public readonly data: any,
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
 		public readonly command?: vscode.Command
 	) {
 		super(label, collapsibleState);
 
-		this.tooltip = `${this.label}-${this.version}`;
-		this.description = this.version;
+		this.addon = label;
+		this.tooltip = `${this.label}`;
+		this.description = '';
+
+		if (this.data?.addon?.version) {
+			this.tooltip += `-${this.data.addon.version}`;
+			this.description = this.data.addon.version;
+		}
 	}
 
 	iconPath = {

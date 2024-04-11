@@ -5,7 +5,7 @@ import * as mkdirp from 'mkdirp';
 import * as rimraf from 'rimraf';
 
 import { AddonReader } from './AddonReader';
-import { Addon } from './AddonTreeItem';
+import { Addon, getAddonItem } from './AddonTreeItem';
 import { ClipboardService } from '../utility/clipboardService';
 import { IClipboardService } from '../utility/IClipboardService';
 import { isEqual, isEqualOrParent, rtrim } from '../utility/strings';
@@ -743,16 +743,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
-	private getAddonItem(addon:string): Addon {
-		const addonData = this.addonReader.getAddonData(addon);
-
-		const collapsibleState = this.expanded.find(a => a === addon)
-			? vscode.TreeItemCollapsibleState.Expanded 
-			: vscode.TreeItemCollapsibleState.Collapsed;
-
-		return new Addon(addon, addonData.addon.version, collapsibleState);
-	}
-
 	/**
 	 * Given the selected addons
 	 */
@@ -761,7 +751,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			addon => this._selectedAddons.indexOf(addon) !== -1
 		);
 		const addons = addonNames
-			? Object.values(addonNames).map(addon => this.getAddonItem(addon))
+			? Object.values(addonNames).map(addon => {
+				const collapsibleState = this.expanded.find(a => a === addon)
+					? vscode.TreeItemCollapsibleState.Expanded 
+					: vscode.TreeItemCollapsibleState.Collapsed;
+
+				return getAddonItem(addon, this.addonReader, collapsibleState);
+			})
 			: [];
 
 		return addons;
