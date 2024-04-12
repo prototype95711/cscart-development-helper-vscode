@@ -216,12 +216,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		));
 
 		const repositoryWatcher = vscode.workspace.createFileSystemWatcher(
-			new vscode.RelativePattern(vscode.Uri.file(rootPath), '**')
+			new vscode.RelativePattern(
+				vscode.Uri.file(rootPath), 
+				'{**/app/**,**/design/**,**/js/**,**/var/themes_repository/**}'
+			)
 		);
 		context.subscriptions.push(repositoryWatcher);
 
 		const onRepositoryFileChange = anyEvent(
-			repositoryWatcher.onDidChange, 
 			repositoryWatcher.onDidCreate, 
 			repositoryWatcher.onDidDelete
 		);

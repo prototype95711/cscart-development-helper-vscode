@@ -62,7 +62,7 @@ export class AddonTranslator {
 
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: vscode.l10n.t("Translating addon"),
+                title: needTranslate ? vscode.l10n.t("Translating addon") : vscode.l10n.t("Normalization addon lang vars"),
                 cancellable: false
             }, async (progress, token) => {
                 token.onCancellationRequested(() => {
@@ -208,7 +208,7 @@ export class AddonTranslator {
         }
 
         var isDefaultLanguage = lang_code === DEFAULT_LANGUAGE;
-        var translatedStrings: string[] = [];
+        var translatedStrings: TranslatedString[] = [];
 
         try {
             var translate = require("translate-google-fixed-api");
@@ -216,45 +216,50 @@ export class AddonTranslator {
             for (var lv of toTranslate) {
                 var valWithId = lv[1].values.find(v => {return v.id.trim();});
 
-                if (valWithId) {
-                    const _key = translatedStrings.indexOf(valWithId.id);
+                if (!valWithId || !valWithId?.id) {
+                    continue;
+                }
+                
+                var result;
+                const _key = translatedStrings.findIndex(ts => {return ts.id === valWithId?.id;});
 
-                    if (_key === -1) {
-                        const result = await translate(valWithId.id, {
-                            tld: "ru",
-                            to: lang_code
-                        });
+                if (_key === -1) {
+                    result = await translate(valWithId.id, {
+                        tld: "ru",
+                        to: lang_code
+                    });
 
-                        if (result?.length > 0) {
-                            const translated = result.join(' ');
+                    translatedStrings.push({id: valWithId.id, value: result});
+                } else {
+                    result = translatedStrings[_key].value;
+                }
 
-                            lv[1].values = lv[1].values.map(
-                                val => {
-                                    if (val.lang_code === lang_code) {
-                                        val.value = [translated];
-                                    }
+                if (result?.length > 0) {
+                    const translated = result.join(' ');
 
-                                    if (isDefaultLanguage && translated.trim()) {
-                                        val.id = translated;
-                                    }
+                    lv[1].values = lv[1].values.map(
+                        val => {
+                            if (val.lang_code === lang_code) {
+                                val.value = [translated];
+                            }
 
-                                    return val;
-                                }
-                            );
+                            if (isDefaultLanguage && translated.trim()) {
+                                val.id = translated;
+                            }
 
-                            var newValue: LangVarValue = {
-                                lang_code: lang_code,
-                                id: valWithId.id,
-                                value: translated,
-                                plural: '',
-                                comments : undefined
-                            };
-                            
-                            lv[1].values.push(newValue);
+                            return val;
                         }
+                    );
 
-                        translatedStrings.push(valWithId.id);
-                    }
+                    var newValue: LangVarValue = {
+                        lang_code: lang_code,
+                        id: valWithId.id,
+                        value: translated,
+                        plural: '',
+                        comments : undefined
+                    };
+                    
+                    lv[1].values.push(newValue);
                 }
             }
 
@@ -288,59 +293,62 @@ export class AddonTranslator {
                         translations: this.getTranslations(sl)
                     };
 
-                    var buf = po.compile(langFile, {sort: function (a: GetTextTranslation, b: GetTextTranslation) {
-                        if (!a?.msgctxt) {
-                            return 1;
-                        } else if (!b?.msgctxt) {
-                            return -1;
-                        }
-
-                        if (a?.msgctxt.includes('Addons::')) {
-
-                            if (a?.msgctxt.includes('name::')) {
+                    var buf = po.compile(langFile, {
+                        foldLength: 0,
+                        sort: function (a: GetTextTranslation, b: GetTextTranslation) {
+                            if (!a?.msgctxt) {
+                                return 1;
+                            } else if (!b?.msgctxt) {
                                 return -1;
                             }
+
+                            if (a?.msgctxt.includes('Addons::')) {
+
+                                if (a?.msgctxt.includes('name::')) {
+                                    return -1;
+                                }
+                                
+                                if (b?.msgctxt.includes('Addons::')) {
+                                    return 0;
+                                }
+
+                                return -1;
+
+                            } else if (b?.msgctxt.includes('Addons::')) {
+                                return 1;
+                            }
                             
-                            if (b?.msgctxt.includes('Addons::')) {
-                                return 0;
+                            if (a?.msgctxt.includes('SettingsSections::')) {
+                                return b?.msgctxt.includes('SettingsSections::') ? 0 : -1;
+
+                            } else if (b?.msgctxt.includes('SettingsSections::')) {
+                                return 1;
                             }
 
-                            return -1;
+                            if (a?.msgctxt.includes('SettingsOptions::')) {
+                                return b?.msgctxt.includes('SettingsOptions::') ? 0 : -1;
 
-                        } else if (b?.msgctxt.includes('Addons::')) {
-                            return 1;
+                            } else if (b?.msgctxt.includes('SettingsOptions::')) {
+                                return 1;
+                            }
+
+                            if (a?.msgctxt.includes('Languages::email_template')) {
+                                return b?.msgctxt.includes('Languages::email_template') ? 0 : -1;
+
+                            } else if (b?.msgctxt.includes('Languages::email_template')) {
+                                return 1;
+                            }
+
+                            if (a?.msgctxt.includes('Languages::internal_template')) {
+                                return b?.msgctxt.includes('Languages::internal_template') ? 0 : -1;
+
+                            } else if (b?.msgctxt.includes('Languages::internal_template')) {
+                                return 1;
+                            }
+
+                            return 0;
                         }
-                        
-                        if (a?.msgctxt.includes('SettingsSections::')) {
-                            return b?.msgctxt.includes('SettingsSections::') ? 0 : -1;
-
-                        } else if (b?.msgctxt.includes('SettingsSections::')) {
-                            return 1;
-                        }
-
-                        if (a?.msgctxt.includes('SettingsOptions::')) {
-                            return b?.msgctxt.includes('SettingsOptions::') ? 0 : -1;
-
-                        } else if (b?.msgctxt.includes('SettingsOptions::')) {
-                            return 1;
-                        }
-
-                        if (a?.msgctxt.includes('Languages::email_template')) {
-                            return b?.msgctxt.includes('Languages::email_template') ? 0 : -1;
-
-                        } else if (b?.msgctxt.includes('Languages::email_template')) {
-                            return 1;
-                        }
-
-                        if (a?.msgctxt.includes('Languages::internal_template')) {
-                            return b?.msgctxt.includes('Languages::internal_template') ? 0 : -1;
-
-                        } else if (b?.msgctxt.includes('Languages::internal_template')) {
-                            return 1;
-                        }
-
-                        return 0;
-                    }});
+                    });
 
                     const langFileName = getTranslateFilePath(this.addonReader.workspaceRoot, this.addon.label, sl);
                     
@@ -384,7 +392,7 @@ export class AddonTranslator {
             const data = await afs.readFile(translatesFilePath.path);
 
             if (data) {
-                const parsed = po.parse(data);
+                const parsed = po.parse(data, 'utf-8');
                 
                 if (parsed) {
                     await this.setTranslationsData(parsed, lang_code);
@@ -418,7 +426,7 @@ export class AddonTranslator {
     }
 
     async setLangvarData(
-        langvar: string, 
+        langvar: string,   
         langvar_data: { [msgId: string]: GetTextTranslation }, 
         lang_code: string
     ) {
@@ -571,6 +579,11 @@ export class AddonTranslator {
             }
         });
     }
+}
+
+interface TranslatedString {
+    id: string,
+    value: any
 }
 
 interface LangVar {
