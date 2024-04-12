@@ -287,9 +287,11 @@ export class AddonTranslator {
                         header = this.getDefaultHeader(sl);
                     }
 
+                    const f_header = {'Content-Type': 'text/plain'};
+
                     var langFile: GetTextTranslations = {
                         charset: charset,
-                        headers: header,
+                        headers: f_header,
                         translations: this.getTranslations(sl)
                     };
 
@@ -353,6 +355,15 @@ export class AddonTranslator {
                     const langFileName = getTranslateFilePath(this.addonReader.workspaceRoot, this.addon.label, sl);
                     
                     if (langFileName) {
+                        //replace to custom header
+                        var header_s = '""\n';
+
+                        for (var key in header) {
+                            header_s += '"' + key + ': ' + header[key] + '\\n"\n';
+                        }
+                        
+                        buf = Buffer.from(buf.toString().replace('"Content-Type: text/plain\\n"\n', header_s) + '\n\n', 'utf-8');
+                        //END replace to custom header
 
                         const dirname = path.dirname(langFileName);
                         const exists = await afs.exists(dirname);

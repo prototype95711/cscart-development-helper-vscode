@@ -13,6 +13,7 @@ import { posix } from 'path/posix';
 import { ResourceFileEdit } from '../utility/resourceFileEdit';
 import { AddonsConfiguration, CONFIGURATION_FILE } from './config/addonsConfiguration';
 import { AddonTranslator } from './AddonTranslator';
+import { AddonPath } from './AddonPath';
 
 namespace _ {
 
@@ -311,6 +312,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 			if (element instanceof Addon) {
 				const addonFolders = await this.addonReader.getAddonPathes(element.label, -1);
+				addonFolders.sort((a: AddonPath, b: AddonPath) => {
+					if (a.path < b.path) {
+					  return -1;
+					}
+					if (a.path > b.path) {
+					  return 1;
+					}
+
+					return 0;
+				});
 				const result: AddonEntry[] = [];
 
 				addonFolders.forEach(_path => {
