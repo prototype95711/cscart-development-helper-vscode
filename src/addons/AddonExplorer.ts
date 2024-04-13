@@ -14,6 +14,9 @@ import { ResourceFileEdit } from '../utility/resourceFileEdit';
 import { AddonsConfiguration, CONFIGURATION_FILE } from './config/addonsConfiguration';
 import { AddonTranslator } from './AddonTranslator';
 import { AddonPath } from './AddonPath';
+import { ADDON_CATALOG } from './AddonFiles';
+
+const CSCART_ROOT_FOLDER_PLACEHOLDER = '$storeFolder$';
 
 namespace _ {
 
@@ -133,6 +136,7 @@ export interface AddonEntry {
 	offset: number;
 	uri: vscode.Uri;
 	type: vscode.FileType;
+	compactOffset?: number
 }
 
 export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
@@ -284,19 +288,27 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					arguments: [element.uri] 
 				};
 				treeItem.contextValue = 'file';
-			} else if (
-				element.type === vscode.FileType.Directory
-				&& element.uri.path.includes(element.addon)
-			) {
-				treeItem.contextValue = 'folder';
-			}
+			} else if (element.type === vscode.FileType.Directory) {
+				const isAddonPath = element.uri.path.includes(element.addon);
+				const isCompact = (element.compactOffset && element.compactOffset > 1);
 
-			/*const _label: vscode.TreeItemLabel = new TreeItemLabelCustom(
-				treeItem?.label?.toString() ?? 'p',
-				[],
-				true
-			);
-			treeItem.label =  _label;*/
+				if (isAddonPath) {
+					treeItem.contextValue = 'folder';
+				} else if (isCompact) {
+					treeItem.contextValue = 'compactFolder';
+				} else {
+					treeItem.contextValue = 'csFolder';
+				}
+			}
+			
+			if (element.compactOffset) {
+				const _label: vscode.TreeItemLabel = new TreeItemLabelCustom(
+					treeItem?.label?.toString() ?? 'p',
+					[],
+					true
+				);
+				treeItem.label = element.uri.path.split('/').slice(-element.compactOffset).join('/');
+			}
 
 			return treeItem;
 		}
@@ -311,7 +323,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (element) {
 
 			if (element instanceof Addon) {
-				const addonFolders = await this.addonReader.getAddonPathes(element.label, -1);
+				var addonFolders = await this.addonReader.getAddonPathes(element.label, -1);
 				addonFolders.sort((a: AddonPath, b: AddonPath) => {
 					if (a.path < b.path) {
 					  return -1;
@@ -322,19 +334,33 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 					return 0;
 				});
-				const result: AddonEntry[] = [];
+				
+				var result: AddonEntry[] = [];
 
 				addonFolders.forEach(_path => {
-					const entry: AddonEntry = { uri: vscode.Uri.file(_path.path), type: _path.type, addon: element.label, offset: 0};
+					const entry: AddonEntry = { 
+						uri: vscode.Uri.file(_path.path), 
+						type: _path.type, 
+						addon: element.label, 
+						offset: 0
+					};
 					result.push(entry);
 					this.tree.push(entry);
 				});
+
+				result = await Promise.all(result.map(
+					async r => await this.compactFolders(r, 1)
+				));
 
 				return result;
 
 			} else {
 				const offset = element.offset === -1 ? 1 : element.offset + 1;
-				const addonPathes = await this.addonReader.getAddonPathes(element.addon, element.offset, element.uri.path);
+				const addonPathes = await this.addonReader.getAddonPathes(
+					element.addon, 
+					element.offset, 
+					element.uri.path
+				);
 
 				if (addonPathes.length === 0) {
 					const children = await this.readDirectory(element.uri);
@@ -388,6 +414,44 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return [];
 	}
 
+	async compactFolders(element: AddonEntry, offset: number): Promise<AddonEntry> {
+		
+		var currentElement = { 
+			uri: element.uri, 
+			type: element.type, 
+			addon: element.addon, 
+			offset: element.offset,
+			compactOffset: offset
+		};
+		const isNotCompactible = element.uri.path.includes(
+			path.join(ADDON_CATALOG, element.addon)
+		);
+
+		if (isNotCompactible) {
+			return currentElement;
+		}
+
+		var child = await this.getChildren(element);
+		
+
+		if (
+			!child?.length 
+			|| child.length > 1 
+			|| child instanceof Addon
+		) {
+			return currentElement;
+			
+		} else if (child?.[0] && !(child?.[0] instanceof Addon) ) {
+			
+			if (child[0].type !== vscode.FileType.Directory) {
+				return currentElement;
+			}
+
+			return this.compactFolders(child[0], offset + 1);
+		}
+
+		return currentElement;
+	}
 
 	watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[]; }): vscode.Disposable {
 		const watcher = fs.watch(uri.fsPath, { recursive: options.recursive }, async (event, filename) => {
@@ -788,10 +852,24 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			uri = resource.uri;
 		}
 
-		vscode.window.showInputBox({ 
+		var options: vscode.InputBoxOptions = { 
 			placeHolder: vscode.l10n.t('Enter the folder name'), 
 			value: '' 
-		}).then(
+		};
+
+		if (!(resource instanceof vscode.Uri)
+		 	&& resource?.compactOffset && resource?.compactOffset > 1
+			&& this.getTreeItem(resource)?.contextValue === 'compactFolder'
+		) {
+			const uri_parts = resource.uri.path.split('/');
+			options.value = CSCART_ROOT_FOLDER_PLACEHOLDER + '/' 
+				+ uri_parts.slice(
+					-resource.compactOffset
+				).join('/') + '/';
+			options.valueSelection = [options.value.length, options.value.length];
+		}
+
+		vscode.window.showInputBox(options).then(
 			value => this.askNewFolder(uri, value)
 		);
 	}
@@ -800,7 +878,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		const tree = this.tree;
 
 		if (newFoldername !== null && newFoldername !== undefined && newFoldername && tree) {
-			const target_uri = vscode.Uri.file(path.join(uri.fsPath, newFoldername));
+
+			var target_uri;
+
+			if (newFoldername.includes(CSCART_ROOT_FOLDER_PLACEHOLDER)) {
+				newFoldername = newFoldername.replace(
+					CSCART_ROOT_FOLDER_PLACEHOLDER, 
+					this.addonReader.workspaceRoot
+				);
+				target_uri = vscode.Uri.file(newFoldername);
+			} else {
+				target_uri = vscode.Uri.file(path.join(uri.fsPath, newFoldername));
+			}
+			
 			const exists = await _.exists(target_uri.fsPath);
 
 			if (!exists) {

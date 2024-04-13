@@ -14,6 +14,8 @@ export function pathExists(p: AddonPath | string): boolean {
 
 export class AddonPath {
 
+    public compact_label: string = '';
+
 	constructor(public path: string, public type: vscode.FileType) {
 	}
 }
