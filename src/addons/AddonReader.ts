@@ -82,7 +82,7 @@ export class AddonReader {
 			return this.getAddonPath(_path, offset, currentPath);
 		});
 
-		const onlyUnique = (value:AddonPath, index: number, array: AddonPath[]) => {
+		const onlyUnique = (value: AddonPath, index: number, array: AddonPath[]) => {
 			return array.findIndex(addonPath => addonPath.path === value.path) === index;
 		};
 		

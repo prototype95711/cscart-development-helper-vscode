@@ -12,6 +12,7 @@ export const DESIGN_BACKEND_CATALOG = 'backend';
 export const DESIGN_THEMES_CATALOG = 'themes';
 
 export const DESIGN_MAIL_CATALOG = 'mail';
+export const DESIGN_CSS_CATALOG = 'css';
 export const DESIGN_TEMPLATES_CATALOG = 'templates';
 
 export const DESIGN_PARTS = [
@@ -175,7 +176,7 @@ export async function getTranslatesPath(workspaceRoot: string | undefined, addon
 	return langsAddonFiles;
 }
 
-async function getThemeNames (designPath:string) : Promise<string[]> {
+export async function getThemeNames(designPath: string) : Promise<string[]> {
 	return Promise.resolve(fs.readdirSync(designPath, { withFileTypes: true })
 		.filter(dirent => dirent.isDirectory())
 		.map(dirent => dirent.name).filter(

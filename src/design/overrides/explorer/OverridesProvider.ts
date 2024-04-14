@@ -3,17 +3,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as afs from '../../../utility/afs';
 import { AddonEntry, FileStat } from '../../../addons/explorer/AddonExplorer';
-import { CSDesignPath, isOpenedFilesWithOverrides } from '../OverridesFinder';
+import { CSDesignPath, designThemesCatalog, isOpenedFilesWithOverrides, varThemeRepCatalog } from '../OverridesFinder';
 import { Addon, getAddonItem } from '../../../treeview/AddonTreeItem';
 import { AddonReader } from '../../../addons/AddonReader';
 import { Core } from '../../../treeview/CoreTreeItem';
-import { ADDON_CATALOG } from '../../../addons/files/AddonFiles';
+import { ADDON_CATALOG, DESIGN_THEMES_CATALOG, VAR_THEMES_REPOSITORY_CATALOG } from '../../../addons/files/AddonFiles';
+
+const DESIGN_FOLDER_PLACEHOLDER = '$designFolder$';
+const DESIGN_THEME_FOLDER_PLACEHOLDER = '$themeFolder$';
 
 export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core | OverrideEntry>, vscode.FileSystemProvider {
 	private cache: CachedOverridesList[] = [];
 	public list: CSDesignPath[] = [];
 
-	public originalElement: CSDesignPath | undefined;
+	public originalElement: CSDesignPath[] = [];
 
     private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	
@@ -128,6 +131,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 	}
 
     async getChildren(element?: Addon | OverrideEntry): Promise<Addon[] | Core[] | Array<Addon | Core> | OverrideEntry[]> {
+		
 		if (element instanceof Addon) {
 			const overrideFiles = this.list.filter(l => l.addon === element.addon);
 			const result: OverrideEntry[] = [];
@@ -142,17 +146,30 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 					result.push(entry);
 				});
 				
-			} else if (
-				this.originalElement !== undefined
-				&& this.originalElement.addon === element.addon
-			) {
-				const entry: OverrideEntry = { 
-					uri: vscode.Uri.file(this.originalElement.fullPath), 
-					type: vscode.FileType.File,
-					csPath: this.originalElement.fullPath.replace(this.workspaceRoot, '')
-				};
-				result.push(entry);
+			} else if (this.originalElement.length > 0) {
+
+				const oe = this.originalElement.filter(e => e.addon === element.addon);
+
+				if (oe.length > 0) {
+					oe.map(e => {
+						const entry: OverrideEntry = { 
+							uri: vscode.Uri.file(e.fullPath), 
+							type: vscode.FileType.File,
+							csPath: e.fullPath.replace(this.workspaceRoot, '')
+						};
+						result.push(entry);
+					});
+				}
 			}
+
+			result.sort((a, b) => {
+
+				if (a.uri.path < b.uri.path) {
+					return -1;
+				}
+	
+				return 0;
+			});
 
 			return result;
 		}
@@ -168,8 +185,41 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 					csPath: coreFile.templatePath.replace(this.workspaceRoot, '')
 				};
 
+				var rPath = '';
+
+				if (coreFile.templatePath.includes(designThemesCatalog)) {
+					rPath = coreFile.templatePath.replace(
+						designThemesCatalog,
+						varThemeRepCatalog
+					);
+				} else if (coreFile.templatePath.includes(varThemeRepCatalog)) {
+					rPath = coreFile.templatePath.replace(
+						varThemeRepCatalog,
+						designThemesCatalog
+					);
+				}
+
+				if (rPath.length > 0 && await afs.exists(rPath)) {
+					const rEntry: OverrideEntry = { 
+						uri: vscode.Uri.file(rPath), 
+						type: vscode.FileType.File,
+						csPath: rPath.replace(this.workspaceRoot, '')
+					};
+
+					result.push(rEntry);
+				}
+
 				result.push(entry);
 			}
+
+			result.sort((a, b) => {
+
+				if (a.uri.path < b.uri.path) {
+					return -1;
+				}
+	
+				return 0;
+			});
 
 			return result;
 		}
@@ -200,7 +250,32 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 									designPath: coreFile.designPath 
 								};
 				
-								this.originalElement = entry;
+								this.originalElement.push(entry);
+								var rPath = '';
+
+								if (entry.fullPath.includes(designThemesCatalog)) {
+									rPath = entry.fullPath.replace(
+										designThemesCatalog,
+										varThemeRepCatalog
+									);
+								} else if (entry.fullPath.includes(varThemeRepCatalog)) {
+									rPath = entry.fullPath.replace(
+										varThemeRepCatalog,
+										designThemesCatalog
+									);
+								}
+
+								if (rPath.length > 0 && await afs.exists(rPath)) {
+									const rEntry: CSDesignPath = { 
+										addon: addon,
+										path: rPath.replace(this.workspaceRoot, ''),
+										fullPath: rPath, 
+										templatePath: rPath,
+										designPath: coreFile.designPath 
+									};
+
+									this.originalElement.push(rEntry);
+								}
 							}
 						}
 						
@@ -220,7 +295,11 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 	 * Given the selected addons
 	 */
 	private getAddons(): Addon[] {
-		var addons: string[] = this.list.map(item => item.addon);
+		const onlyUnique = (value: CSDesignPath, index: number, array: CSDesignPath[]) => {
+			return array.findIndex(path => path.addon === value.addon) === index;
+		};
+
+		var addons: string[] = this.list.filter(onlyUnique).map(item => item.addon);
 		var addonObjects: Addon[] = addons.length > 0
 			? addons.map(addon => getAddonItem(addon, this.addonReader))
 			: [];
@@ -331,12 +410,15 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 	}
 
 	public async updateList(filepath: string, overridesList: CSDesignPath[]) {
+		filepath = this.setPlaceholder(filepath);
+			
 		this.cache.push({path: filepath, list: overridesList});
 		this.selectList(filepath);
 	}
 
 	public async selectList(filepath: string) {
-		this.originalElement = undefined;
+		filepath = this.setPlaceholder(filepath);
+		this.originalElement = [];
 		const cached = this.cache.findIndex(c => {return c.path === filepath;});
 
 		if (cached !== -1) {
@@ -346,6 +428,13 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 		}
 
 		this.refresh();
+	}
+
+	private setPlaceholder(filepath: string): string {
+		return filepath.replace(
+			new RegExp("[/](" + designThemesCatalog + "|" + varThemeRepCatalog + ")[/][√\\w.]*[/]"), 
+			'/themes/' + DESIGN_THEME_FOLDER_PLACEHOLDER + '/'
+		);
 	}
 }
 

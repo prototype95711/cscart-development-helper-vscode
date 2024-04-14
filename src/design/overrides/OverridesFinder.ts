@@ -2,13 +2,17 @@ import * as vscode from 'vscode';
 import * as afs from '../../utility/afs';
 
 import { AddonReader } from '../../addons/AddonReader';
-import { ADDON_CATALOG, DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes } from '../../addons/files/AddonFiles';
+import { ADDON_CATALOG, DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes, getThemeNames } from '../../addons/files/AddonFiles';
 import { readDirectory } from '../../utility/afs';
 import path from 'path';
-import { Console } from 'console';
 
 const fileExtensionWithOverrides = '.tpl';
 const overridesPath = 'overrides';
+
+export const designThemesCatalog = path.join(DESIGN_CATALOG, DESIGN_THEMES_CATALOG);
+export const varThemeRepCatalog = path.join(VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG);
+
+const THEME_FOLDER_PLACEHOLDER = '$themeFolder$';
 
 export class OverridesFinder {
     
@@ -27,12 +31,20 @@ export class OverridesFinder {
         const addonsList = this.addonReader.getAddons();
 
         if (addonsList?.length > 0) {
+            const csDesignPath = toCSDesignPath(filepath.path, '', this.workspaceRoot);
+
             await Promise.all(
                 addonsList.map(async addon => {
-                    const override = await this.findOverrideInAddon(filepath, addon);
+                    const addonOverrides = await this.findOverridesInAddon(
+                        csDesignPath, 
+                        addon
+                    );
                     
-                    if (override !== undefined) {
-                        overrides.push(override);
+                    if (addonOverrides?.length > 0) {
+                        addonOverrides.map(ov => {
+                            ov.addon = addon;
+                            overrides.push(ov);
+                        });
                     }
                 })
             );
@@ -41,29 +53,262 @@ export class OverridesFinder {
         return overrides;
     }
 
-    async findOverrideInAddon(filepath: vscode.Uri, addon: string) : Promise<CSDesignPath | undefined> {
-        const csWorkspaceFilePath = toCSDesignPath(filepath.path, addon, this.workspaceRoot);
+    async findOverridesInAddon(csDesignPath: CSDesignPath, addon: string) : Promise<Array<CSDesignPath>> {
+        var result : Array<CSDesignPath> = [];
 
         if (
-            csWorkspaceFilePath.path.length < 1 
-            || csWorkspaceFilePath.designPath.length < 1
+            csDesignPath.path.length < 1 
+            || csDesignPath.designPath.length < 1
         ) {
-            return undefined;
+            return result;
         }
 
-        const pathToSearch = path.join(this.workspaceRoot, csWorkspaceFilePath.designPath, 
-            ADDON_CATALOG, addon, overridesPath, csWorkspaceFilePath.path);
+        const designPath = csDesignPath.designPath;
+        const pathToSearch = path.join(this.workspaceRoot, designPath, 
+            ADDON_CATALOG, addon, overridesPath, csDesignPath.path);
 
-        if (await afs.exists(pathToSearch)) {
-            csWorkspaceFilePath.fullPath = pathToSearch;
-            csWorkspaceFilePath.templatePath = path.join(
-                this.workspaceRoot, 
-                csWorkspaceFilePath.designPath,
-                csWorkspaceFilePath.path
+        if (pathToSearch.includes(
+                designThemesCatalog
+            )
+            || pathToSearch.includes(
+                varThemeRepCatalog
+            )
+        ) {
+            result = await this.findOverridesInThemes(
+                {
+                    addon: addon,
+                    path: csDesignPath.path,
+                    fullPath: pathToSearch, 
+                    templatePath: path.join(
+                        this.workspaceRoot, 
+                        csDesignPath.designPath,
+                        csDesignPath.path
+                    ), //original file fullpath
+                    designPath: designPath,
+                    theme: csDesignPath?.theme
+                },
+                addon,
+                result
             );
-            return csWorkspaceFilePath;
+            
+        } else {
+            if (await afs.exists(pathToSearch)) {
+                result.push({
+                    addon: addon,
+                    path: csDesignPath.path,
+                    fullPath: pathToSearch, 
+                    templatePath: path.join(
+                        this.workspaceRoot, 
+                        csDesignPath.designPath,
+                        csDesignPath.path
+                    ), //original file fullpath
+                    designPath: designPath,
+                    theme: csDesignPath?.theme
+                });
+    
+            } else {
+                const rDesignPath = csDesignPath.designPath.includes(varThemeRepCatalog) 
+                    ? csDesignPath.designPath.replace(
+                        varThemeRepCatalog,
+                        designThemesCatalog
+                    ) 
+                    : csDesignPath.designPath.replace(
+                        designThemesCatalog,
+                        varThemeRepCatalog
+                    );
+                const rPathToSearch = path.join(this.workspaceRoot, rDesignPath, 
+                    ADDON_CATALOG, addon, overridesPath, csDesignPath.path);
+    
+                if (await afs.exists(rPathToSearch)) {
+                    result.push({
+                        addon: addon,
+                        path: csDesignPath.path,
+                        fullPath: rPathToSearch, 
+                        templatePath: path.join(
+                            this.workspaceRoot, 
+                            rDesignPath,
+                            csDesignPath.path
+                        ), //original file fullpath
+                        designPath: rDesignPath,
+                        theme: csDesignPath?.theme
+                    });
+                }
+            }
+        }
+
+        if (result.length > 0) {
+            result = await this.findOverridesInAltCatalog(
+                addon,
+                result
+            );
         }
         
+        return result;
+    }
+
+    async findOverridesInAltCatalog(
+        addon: string, 
+        result: CSDesignPath[]
+    ) : Promise<Array<CSDesignPath>> {
+        
+        if (result.length > 0) {
+            await Promise.all(
+                result.map(
+                    async tFile => {
+                        const cResult = await this.findOverrideInAltCatalog(
+                            tFile,
+                            addon
+                        );
+    
+                        if (cResult !== undefined) {
+                            result.push(cResult);
+                        }
+                    }
+                )
+            );
+        }
+
+        return result;
+    }
+
+    async findOverrideInAltCatalog(
+        csDesignPath: CSDesignPath, 
+        addon: string
+    ) : Promise<CSDesignPath | undefined>
+    {
+        const isInVarThemes = csDesignPath.fullPath.includes(
+            varThemeRepCatalog
+        );
+
+        if (
+            isInVarThemes
+            || csDesignPath.fullPath.includes(designThemesCatalog)
+        ) {
+            const rDesignPath = isInVarThemes 
+                ? csDesignPath.designPath.replace(
+                    varThemeRepCatalog,
+                    designThemesCatalog
+                ) 
+                : csDesignPath.designPath.replace(
+                    designThemesCatalog,
+                    varThemeRepCatalog
+                );
+                
+            const rPathToSearch = path.join(this.workspaceRoot, rDesignPath, 
+                ADDON_CATALOG, addon, overridesPath, csDesignPath.path);
+
+            if (await afs.exists(rPathToSearch)) {
+                const rCSDesignPath: CSDesignPath = {
+                    addon: addon,
+                    path: csDesignPath.path,
+                    fullPath: rPathToSearch, 
+                    templatePath: path.join(
+                        this.workspaceRoot, 
+                        rDesignPath,
+                        csDesignPath.path
+                    ), //original file fullpath
+                    designPath: rDesignPath,
+                    theme: csDesignPath.theme
+                };
+
+                return rCSDesignPath;
+            }
+        }
+
+        return undefined;
+    }
+
+    async findOverridesInThemes(
+        csDesignPath: CSDesignPath, 
+        addon: string, 
+        result: CSDesignPath[]
+    ) : Promise<Array<CSDesignPath>> {
+        const isInDesignTheme = csDesignPath.fullPath.includes(
+            designThemesCatalog
+        );
+
+        if (csDesignPath.theme) {
+            const tDesignPath = csDesignPath.designPath.replace(
+                csDesignPath.theme,
+                THEME_FOLDER_PLACEHOLDER
+            );
+            
+            var themeNames = isInDesignTheme 
+                ? await getThemeNames(path.join(this.workspaceRoot, designThemesCatalog))
+                : await getThemeNames(path.join(this.workspaceRoot, varThemeRepCatalog));
+
+            if (themeNames.length > 0) {
+                await Promise.all(themeNames.map(async themeName => {
+                    const tResult = await this.findOverridesInTheme(
+                        csDesignPath,
+                        addon,
+                        tDesignPath,
+                        themeName
+                    );
+
+                    if (tResult !== undefined) {
+                        result.push(tResult);
+                    } else {
+                        const rDesignPath = isInDesignTheme 
+                            ? tDesignPath.replace(
+                                designThemesCatalog,
+                                varThemeRepCatalog
+                            )
+                            : tDesignPath.replace(
+                                varThemeRepCatalog,
+                                designThemesCatalog
+                            );
+
+                        const tResult = await this.findOverridesInTheme(
+                            csDesignPath,
+                            addon,
+                            rDesignPath,
+                            themeName
+                        );
+
+                        if (tResult !== undefined) {
+                            result.push(tResult);
+                        }
+                    }
+                }));
+            }
+        }
+
+        return result;
+    }
+
+    async findOverridesInTheme(
+        csDesignPath: CSDesignPath, 
+        addon: string, 
+        tDesignPath: string, 
+        theme: string
+    ) : Promise<CSDesignPath | undefined> 
+    {
+        const _tDesignPath = tDesignPath.replace(
+            THEME_FOLDER_PLACEHOLDER,
+            theme
+        );
+
+        const rPathToSearch = path.join(this.workspaceRoot, _tDesignPath, 
+            ADDON_CATALOG, addon, overridesPath, csDesignPath.path);
+
+        if (await afs.exists(rPathToSearch)) {
+            const rCSDesignPath: CSDesignPath = {
+                addon: addon,
+                path: csDesignPath.path,
+                fullPath: rPathToSearch, 
+                templatePath: path.join(
+                    this.workspaceRoot, 
+                    _tDesignPath,
+                    csDesignPath.path
+                ), //original file fullpath
+                designPath: _tDesignPath,
+                theme: csDesignPath.theme
+            };
+
+            return rCSDesignPath;
+        }
+
         return undefined;
     }
 
@@ -131,6 +376,7 @@ export function toCSDesignPath(filepath: string, addon: string, workspaceRoot: s
     
     const sFilePath = filterOverridePathPart(filePath);
     const parts = sFilePath.split('/');
+    var theme = '';
 
     if (parts.length >= 4) {
         if (
@@ -166,6 +412,8 @@ export function toCSDesignPath(filepath: string, addon: string, workspaceRoot: s
                     csFilePath = parts.slice(4).join('/');
                     designPath = parts.slice(0, 4).join('/');
                 }
+
+                theme = parts[2];
             }
 
         } else if (
@@ -183,6 +431,8 @@ export function toCSDesignPath(filepath: string, addon: string, workspaceRoot: s
                 csFilePath = parts.slice(4).join('/');
                 designPath = parts.slice(0, 4).join('/');
             }
+
+            theme = parts[2];
         }
     }
 
@@ -191,7 +441,8 @@ export function toCSDesignPath(filepath: string, addon: string, workspaceRoot: s
         path: csFilePath,
         fullPath: '',
         templatePath: '',
-        designPath: designPath
+        designPath: designPath,
+        theme: theme
     };
 }
 
@@ -200,5 +451,6 @@ export interface CSDesignPath {
     path: string,
     fullPath: string, 
     templatePath: string, //original file fullpath
-    designPath: string 
+    designPath: string,
+    theme?: string
 }
