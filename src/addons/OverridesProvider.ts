@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as afs from '../utility/afs';
 import { FileStat } from './AddonExplorer';
-import { CSDesignPath } from './OverridesFinder';
+import { CSDesignPath, isOpenedFilesWithOverrides } from './OverridesFinder';
 import { Addon, getAddonItem } from './AddonTreeItem';
 import { AddonReader } from './AddonReader';
 
@@ -208,6 +208,17 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 			treeItem.contextValue = 'file';
 		}
 		return treeItem;
+	}
+
+	refreshOverrides(): void {
+		if (isOpenedFilesWithOverrides()) {
+			vscode.commands.executeCommand(
+				'csAddonExplorer.findOverrides',
+				vscode.window.activeTextEditor?.document
+					? vscode.window.activeTextEditor.document.uri
+					: undefined
+			);
+		}
 	}
 
 	refresh(): void {

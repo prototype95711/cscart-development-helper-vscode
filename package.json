@@ -40,14 +40,6 @@
         "title": "Find Overrides"
       },
       {
-        "command": "csAddonExplorer.refreshEntry",
-        "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
-      },
-      {
         "command": "csAddonExplorer.normalizeLangVars",
         "title": "Normalize translate files..."
       },
@@ -130,7 +122,23 @@
       {
         "command": "overridesProvider.openFile",
         "title": "Open file"
-      }
+      },
+      {
+				"command": "csAddonExplorer.refresh",
+				"title": "Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
+			},
+      {
+				"command": "csOverridesList.refresh",
+				"title": "Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
+			}
     ],
     "menus": {
       "editor/context": [
@@ -142,14 +150,19 @@
 			],
       "view/title": [
         {
-          "command": "csAddonExplorer.refreshEntry",
-          "when": "view == csAddonExplorer",
-          "group": "navigation"
-        },
-        {
           "command": "csAddonExplorer.open",
           "when": "view == csAddonExplorer"
-        }
+        },
+        {
+					"command": "csAddonExplorer.refresh",
+					"when": "view == csAddonExplorer",
+					"group": "navigation"
+				},
+        {
+					"command": "csOverridesList.refresh",
+					"when": "view == csOverridesList",
+					"group": "navigation"
+				}
       ],
       "view/item/context": [
         {

@@ -32,14 +32,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		const addonExplorer = new AddonExplorer(addonReader);
 		vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
 		context.subscriptions.push(
-			vscode.commands.registerCommand('csAddonExplorer.refreshEntry', () => addonExplorer.refresh())
-		);
-		context.subscriptions.push(
 			vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(
 				addonReader, 
 				addonExplorer, 
 				selectAddon
 			))
+		);
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csAddonExplorer.refresh', () => addonExplorer.refresh())
 		);
 
 		try {
@@ -75,7 +75,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const overridesList = new OverridesProvider(rootPath, addonReader);
 		vscode.window.registerTreeDataProvider('csOverridesList', overridesList);
 		context.subscriptions.push(
-			vscode.commands.registerCommand('csOverridesList.refreshEntry', () => overridesList.refresh())
+			vscode.commands.registerCommand('csOverridesList.refresh', () => overridesList.refreshOverrides())
 		);
 		const viewOverrides = vscode.window.createTreeView(
 			'csOverridesList', 

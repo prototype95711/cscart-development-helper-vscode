@@ -42,7 +42,7 @@ export class OverridesFinder {
     }
 
     async findOverrideInAddon(filepath: vscode.Uri, addon: string) : Promise<CSDesignPath | undefined> {
-        const csWorkspaceFilePath = this.toCSDesignPath(filepath.path, addon);
+        const csWorkspaceFilePath = toCSDesignPath(filepath.path, addon, this.workspaceRoot);
 
         if (
             csWorkspaceFilePath.path.length < 1 
@@ -97,86 +97,20 @@ export class OverridesFinder {
 
         return files;
     }
-
-    toCSDesignPath(filepath: string, addon: string): CSDesignPath {
-        var csFilePath = '', designPath = '';
-        var filePath = filepath.replace(this.workspaceRoot + '/', '');
-        
-        const sFilePath = filterOverridePathPart(filePath);
-        const parts = sFilePath.split('/');
-
-        if (parts.length >= 4) {
-            if (
-                parts[0] === DESIGN_CATALOG
-            ) {
-                if (parts[1] === DESIGN_BACKEND_CATALOG) {
-                    
-                    if (parts[2] === DESIGN_MAIL_CATALOG) {
-
-                        if (
-                            parts[3] === DESIGN_TEMPLATES_CATALOG
-                            && parts?.[4]
-                        ) {
-                            csFilePath = parts.slice(4).join('/');
-                            designPath = parts.slice(0, 4).join('/');
-                        }
-
-                    } else if (parts[2] === DESIGN_TEMPLATES_CATALOG) {
-                        csFilePath = parts.slice(3).join('/');
-                        designPath = parts.slice(0, 3).join('/');
-                    }
-
-                } else if (parts[1] === DESIGN_THEMES_CATALOG) {
-
-                    if (parts[3] === DESIGN_MAIL_CATALOG && parts?.[4]) {
-
-                        if (parts[4] === DESIGN_TEMPLATES_CATALOG && parts?.[5]) {
-                            csFilePath = parts.slice(5).join('/');
-                            designPath = parts.slice(0, 5).join('/');
-                        }
-
-                    } else if (parts[3] === DESIGN_TEMPLATES_CATALOG && parts?.[4]) {
-                        csFilePath = parts.slice(4).join('/');
-                        designPath = parts.slice(0, 4).join('/');
-                    }
-                }
-
-            } else if (
-                parts[0] === VAR_CATALOG 
-                && parts[1] === VAR_THEMES_REPOSITORY_CATALOG
-            ) {
-                if (parts[3] === DESIGN_MAIL_CATALOG && parts?.[4]) {
-
-                    if (parts[4] === DESIGN_TEMPLATES_CATALOG && parts?.[5]) {
-                        csFilePath = parts.slice(5).join('/');
-                        designPath = parts.slice(0, 5).join('/');
-                    }
-
-                } else if (parts[3] === DESIGN_TEMPLATES_CATALOG && parts?.[4]) {
-                    csFilePath = parts.slice(4).join('/');
-                    designPath = parts.slice(0, 4).join('/');
-                }
-            }
-        }
-
-        return {
-            addon: addon,
-            path: csFilePath,
-            fullPath: '',
-            templatePath: '',
-            designPath: designPath
-        };
-    }
 }
 
-export function isOpenedFilesWithOverrides() {
+export function isOpenedFilesWithOverrides(): boolean {
     if (vscode.window.activeTextEditor) {
         if (vscode.window.activeTextEditor.document.uri.scheme === 'file') {
             const enabled = vscode.window.activeTextEditor.document
                 .fileName.toLocaleLowerCase().includes(fileExtensionWithOverrides);
             vscode.commands.executeCommand('setContext', 'isMayBeCSOverrides', enabled);
+
+            return enabled;
         }
     }
+
+    return false;
 }
 
 export function filterOverridePathPart(path: string): string {
@@ -189,6 +123,76 @@ export function filterOverridePathPart(path: string): string {
     );
 
     return path;
+}
+
+export function toCSDesignPath(filepath: string, addon: string, workspaceRoot: string): CSDesignPath {
+    var csFilePath = '', designPath = '';
+    var filePath = filepath.replace(workspaceRoot + '/', '');
+    
+    const sFilePath = filterOverridePathPart(filePath);
+    const parts = sFilePath.split('/');
+
+    if (parts.length >= 4) {
+        if (
+            parts[0] === DESIGN_CATALOG
+        ) {
+            if (parts[1] === DESIGN_BACKEND_CATALOG) {
+                
+                if (parts[2] === DESIGN_MAIL_CATALOG) {
+
+                    if (
+                        parts[3] === DESIGN_TEMPLATES_CATALOG
+                        && parts?.[4]
+                    ) {
+                        csFilePath = parts.slice(4).join('/');
+                        designPath = parts.slice(0, 4).join('/');
+                    }
+
+                } else if (parts[2] === DESIGN_TEMPLATES_CATALOG) {
+                    csFilePath = parts.slice(3).join('/');
+                    designPath = parts.slice(0, 3).join('/');
+                }
+
+            } else if (parts[1] === DESIGN_THEMES_CATALOG) {
+
+                if (parts[3] === DESIGN_MAIL_CATALOG && parts?.[4]) {
+
+                    if (parts[4] === DESIGN_TEMPLATES_CATALOG && parts?.[5]) {
+                        csFilePath = parts.slice(5).join('/');
+                        designPath = parts.slice(0, 5).join('/');
+                    }
+
+                } else if (parts[3] === DESIGN_TEMPLATES_CATALOG && parts?.[4]) {
+                    csFilePath = parts.slice(4).join('/');
+                    designPath = parts.slice(0, 4).join('/');
+                }
+            }
+
+        } else if (
+            parts[0] === VAR_CATALOG 
+            && parts[1] === VAR_THEMES_REPOSITORY_CATALOG
+        ) {
+            if (parts[3] === DESIGN_MAIL_CATALOG && parts?.[4]) {
+
+                if (parts[4] === DESIGN_TEMPLATES_CATALOG && parts?.[5]) {
+                    csFilePath = parts.slice(5).join('/');
+                    designPath = parts.slice(0, 5).join('/');
+                }
+
+            } else if (parts[3] === DESIGN_TEMPLATES_CATALOG && parts?.[4]) {
+                csFilePath = parts.slice(4).join('/');
+                designPath = parts.slice(0, 4).join('/');
+            }
+        }
+    }
+
+    return {
+        addon: addon,
+        path: csFilePath,
+        fullPath: '',
+        templatePath: '',
+        designPath: designPath
+    };
 }
 
 export interface CSDesignPath {
