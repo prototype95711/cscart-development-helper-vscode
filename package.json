@@ -1,6 +1,7 @@
 {
   "name": "cscart-development-helper",
   "displayName": "CSCart Development Helper",
+  "publisher": "GlebPerfiliev",
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
