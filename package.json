@@ -133,7 +133,7 @@
 			},
       {
 				"command": "csOverridesList.refresh",
-				"title": "Refresh",
+				"title": "Find now",
 				"icon": {
 					"light": "resources/light/refresh.svg",
 					"dark": "resources/dark/refresh.svg"

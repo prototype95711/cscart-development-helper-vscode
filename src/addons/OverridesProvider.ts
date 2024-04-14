@@ -2,19 +2,23 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as afs from '../utility/afs';
-import { FileStat } from './AddonExplorer';
+import { AddonEntry, FileStat } from './AddonExplorer';
 import { CSDesignPath, isOpenedFilesWithOverrides } from './OverridesFinder';
 import { Addon, getAddonItem } from './AddonTreeItem';
 import { AddonReader } from './AddonReader';
+import { Core } from './CoreTreeItem';
+import { ADDON_CATALOG } from './AddonFiles';
 
-export class OverridesProvider implements vscode.TreeDataProvider<Addon | OverrideEntry>, vscode.FileSystemProvider {
+export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core | OverrideEntry>, vscode.FileSystemProvider {
 	private cache: CachedOverridesList[] = [];
 	public list: CSDesignPath[] = [];
 
+	public originalElement: CSDesignPath | undefined;
+
     private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	
-	private _onDidChangeTreeData: vscode.EventEmitter<Addon | OverrideEntry | undefined | void> = new vscode.EventEmitter<Addon | OverrideEntry | undefined | void>();
-	readonly onDidChangeTreeData: vscode.Event<Addon | OverrideEntry | undefined | void> = this._onDidChangeTreeData.event;
+	private _onDidChangeTreeData: vscode.EventEmitter<Addon | Core | OverrideEntry | undefined | void> = new vscode.EventEmitter<Addon | Core | OverrideEntry | undefined | void>();
+	readonly onDidChangeTreeData: vscode.Event<Addon | Core | OverrideEntry | undefined | void> = this._onDidChangeTreeData.event;
 
 	constructor(public workspaceRoot: string, private addonReader: AddonReader) {
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -123,7 +127,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 		return afs.rename(oldUri.fsPath, newUri.fsPath);
 	}
 
-    async getChildren(element?: Addon | OverrideEntry): Promise<Addon[] | OverrideEntry[]> {
+    async getChildren(element?: Addon | OverrideEntry): Promise<Addon[] | Core[] | Array<Addon | Core> | OverrideEntry[]> {
 		if (element instanceof Addon) {
 			const overrideFiles = this.list.filter(l => l.addon === element.addon);
 			const result: OverrideEntry[] = [];
@@ -137,13 +141,76 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 					};
 					result.push(entry);
 				});
+				
+			} else if (
+				this.originalElement !== undefined
+				&& this.originalElement.addon === element.addon
+			) {
+				const entry: OverrideEntry = { 
+					uri: vscode.Uri.file(this.originalElement.fullPath), 
+					type: vscode.FileType.File,
+					csPath: this.originalElement.fullPath.replace(this.workspaceRoot, '')
+				};
+				result.push(entry);
+			}
+
+			return result;
+		}
+
+		if (element instanceof Core) {
+			const coreFile = this.list.find(l => l.templatePath.trim());
+			const result: OverrideEntry[] = [];
+
+			if (coreFile) {
+				const entry: OverrideEntry = { 
+					uri: vscode.Uri.file(coreFile.templatePath), 
+					type: vscode.FileType.File,
+					csPath: coreFile.templatePath.replace(this.workspaceRoot, '')
+				};
+
+				result.push(entry);
 			}
 
 			return result;
 		}
 
 		if (this.list.length > 0) {
-			return this.getAddons();
+			var result: Array<Addon | Core> = this.getAddons();
+
+			if (result.length > 0) {
+				const coreFile = this.list.find(l => l.templatePath.trim());
+
+				if (coreFile) {
+					const addonPathRegExp = new RegExp('[/](' + ADDON_CATALOG + ')[/][√\\w.]*[/]');
+					
+					if (addonPathRegExp.test(coreFile.templatePath)) {
+						const addonPath = addonPathRegExp.exec(coreFile.templatePath);
+						
+						if (addonPath?.length) {
+							const addonPathPieces = addonPath[0].split('/');
+							const addon = addonPathPieces.filter(p => p.trim()).pop();
+
+							if (addon && this.list.findIndex(l => l.addon === addon) === -1) {
+								result.push(getAddonItem(addon, this.addonReader));
+								const entry: CSDesignPath = { 
+									addon: addon,
+									path: coreFile.templatePath.replace(this.workspaceRoot, ''),
+									fullPath: coreFile.templatePath, 
+									templatePath: coreFile.templatePath,
+									designPath: coreFile.designPath 
+								};
+				
+								this.originalElement = entry;
+							}
+						}
+						
+					} else {
+						result.push(new Core(vscode.TreeItemCollapsibleState.Collapsed));
+					}
+				}
+			}
+
+			return result;
 		}
 
 		return [];
@@ -184,9 +251,9 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 		return addonObjects;
 	}
 
-    getTreeItem(element: Addon | OverrideEntry): vscode.TreeItem {
+    getTreeItem(element: Addon | Core | OverrideEntry): vscode.TreeItem {
 
-		if (element instanceof Addon) {
+		if (element instanceof Addon || element instanceof Core) {
 			return element;
 		}
 
@@ -269,6 +336,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Overri
 	}
 
 	public async selectList(filepath: string) {
+		this.originalElement = undefined;
 		const cached = this.cache.findIndex(c => {return c.path === filepath;});
 
 		if (cached !== -1) {
