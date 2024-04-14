@@ -74,7 +74,7 @@ export class OverridesFinder {
                 varThemeRepCatalog
             )
         ) {
-            result = await this.findOverridesInThemes(
+            result = await findOverridesInThemes(
                 {
                     addon: addon,
                     path: csDesignPath.path,
@@ -88,9 +88,10 @@ export class OverridesFinder {
                     theme: csDesignPath?.theme
                 },
                 addon,
-                result
+                result,
+                this.workspaceRoot
             );
-            
+
         } else {
             if (await afs.exists(pathToSearch)) {
                 result.push({
@@ -137,179 +138,14 @@ export class OverridesFinder {
         }
 
         if (result.length > 0) {
-            result = await this.findOverridesInAltCatalog(
+            result = await findOverridesInAltCatalog(
                 addon,
-                result
+                result,
+                this.workspaceRoot
             );
         }
         
         return result;
-    }
-
-    async findOverridesInAltCatalog(
-        addon: string, 
-        result: CSDesignPath[]
-    ) : Promise<Array<CSDesignPath>> {
-        
-        if (result.length > 0) {
-            await Promise.all(
-                result.map(
-                    async tFile => {
-                        const cResult = await this.findOverrideInAltCatalog(
-                            tFile,
-                            addon
-                        );
-    
-                        if (cResult !== undefined) {
-                            result.push(cResult);
-                        }
-                    }
-                )
-            );
-        }
-
-        return result;
-    }
-
-    async findOverrideInAltCatalog(
-        csDesignPath: CSDesignPath, 
-        addon: string
-    ) : Promise<CSDesignPath | undefined>
-    {
-        const isInVarThemes = csDesignPath.fullPath.includes(
-            varThemeRepCatalog
-        );
-
-        if (
-            isInVarThemes
-            || csDesignPath.fullPath.includes(designThemesCatalog)
-        ) {
-            const rDesignPath = isInVarThemes 
-                ? csDesignPath.designPath.replace(
-                    varThemeRepCatalog,
-                    designThemesCatalog
-                ) 
-                : csDesignPath.designPath.replace(
-                    designThemesCatalog,
-                    varThemeRepCatalog
-                );
-                
-            const rPathToSearch = path.join(this.workspaceRoot, rDesignPath, 
-                ADDON_CATALOG, addon, overridesPath, csDesignPath.path);
-
-            if (await afs.exists(rPathToSearch)) {
-                const rCSDesignPath: CSDesignPath = {
-                    addon: addon,
-                    path: csDesignPath.path,
-                    fullPath: rPathToSearch, 
-                    templatePath: path.join(
-                        this.workspaceRoot, 
-                        rDesignPath,
-                        csDesignPath.path
-                    ), //original file fullpath
-                    designPath: rDesignPath,
-                    theme: csDesignPath.theme
-                };
-
-                return rCSDesignPath;
-            }
-        }
-
-        return undefined;
-    }
-
-    async findOverridesInThemes(
-        csDesignPath: CSDesignPath, 
-        addon: string, 
-        result: CSDesignPath[]
-    ) : Promise<Array<CSDesignPath>> {
-        const isInDesignTheme = csDesignPath.fullPath.includes(
-            designThemesCatalog
-        );
-
-        if (csDesignPath.theme) {
-            const tDesignPath = csDesignPath.designPath.replace(
-                csDesignPath.theme,
-                THEME_FOLDER_PLACEHOLDER
-            );
-            
-            var themeNames = isInDesignTheme 
-                ? await getThemeNames(path.join(this.workspaceRoot, designThemesCatalog))
-                : await getThemeNames(path.join(this.workspaceRoot, varThemeRepCatalog));
-
-            if (themeNames.length > 0) {
-                await Promise.all(themeNames.map(async themeName => {
-                    const tResult = await this.findOverridesInTheme(
-                        csDesignPath,
-                        addon,
-                        tDesignPath,
-                        themeName
-                    );
-
-                    if (tResult !== undefined) {
-                        result.push(tResult);
-                    } else {
-                        const rDesignPath = isInDesignTheme 
-                            ? tDesignPath.replace(
-                                designThemesCatalog,
-                                varThemeRepCatalog
-                            )
-                            : tDesignPath.replace(
-                                varThemeRepCatalog,
-                                designThemesCatalog
-                            );
-
-                        const tResult = await this.findOverridesInTheme(
-                            csDesignPath,
-                            addon,
-                            rDesignPath,
-                            themeName
-                        );
-
-                        if (tResult !== undefined) {
-                            result.push(tResult);
-                        }
-                    }
-                }));
-            }
-        }
-
-        return result;
-    }
-
-    async findOverridesInTheme(
-        csDesignPath: CSDesignPath, 
-        addon: string, 
-        tDesignPath: string, 
-        theme: string
-    ) : Promise<CSDesignPath | undefined> 
-    {
-        const _tDesignPath = tDesignPath.replace(
-            THEME_FOLDER_PLACEHOLDER,
-            theme
-        );
-
-        const rPathToSearch = path.join(this.workspaceRoot, _tDesignPath, 
-            ADDON_CATALOG, addon, overridesPath, csDesignPath.path);
-
-        if (await afs.exists(rPathToSearch)) {
-            const rCSDesignPath: CSDesignPath = {
-                addon: addon,
-                path: csDesignPath.path,
-                fullPath: rPathToSearch, 
-                templatePath: path.join(
-                    this.workspaceRoot, 
-                    _tDesignPath,
-                    csDesignPath.path
-                ), //original file fullpath
-                designPath: _tDesignPath,
-                theme: csDesignPath.theme
-            };
-
-            return rCSDesignPath;
-        }
-
-        return undefined;
     }
 
     async findTemplateFilesInFolder(uri: vscode.Uri) : Promise<vscode.Uri[]> {
@@ -368,6 +204,194 @@ export function filterOverridePathPart(path: string): string {
     );
 
     return path;
+}
+
+export async function findOverridesInThemes(
+    csDesignPath: CSDesignPath, 
+    addon: string, 
+    result: CSDesignPath[],
+    workspaceRoot: string,
+    isOriginalAddon: boolean = false
+) : Promise<Array<CSDesignPath>> {
+    const isInDesignTheme = csDesignPath.fullPath.includes(
+        designThemesCatalog
+    );
+
+    if (csDesignPath.theme) {
+        const tDesignPath = csDesignPath.designPath.replace(
+            csDesignPath.theme,
+            THEME_FOLDER_PLACEHOLDER
+        );
+        
+        var themeNames = isInDesignTheme 
+            ? await getThemeNames(path.join(workspaceRoot, designThemesCatalog))
+            : await getThemeNames(path.join(workspaceRoot, varThemeRepCatalog));
+
+        if (themeNames.length > 0) {
+            await Promise.all(themeNames.map(async themeName => {
+                const tResult = await findOverridesInTheme(
+                    csDesignPath,
+                    addon,
+                    tDesignPath,
+                    themeName,
+                    workspaceRoot,
+                    isOriginalAddon
+                );
+
+                if (tResult !== undefined) {
+                    result.push(tResult);
+                } else {
+                    const rDesignPath = isInDesignTheme 
+                        ? tDesignPath.replace(
+                            designThemesCatalog,
+                            varThemeRepCatalog
+                        )
+                        : tDesignPath.replace(
+                            varThemeRepCatalog,
+                            designThemesCatalog
+                        );
+
+                    const tResult = await findOverridesInTheme(
+                        csDesignPath,
+                        addon,
+                        rDesignPath,
+                        themeName,
+                        workspaceRoot,
+                        isOriginalAddon
+                    );
+
+                    if (tResult !== undefined) {
+                        result.push(tResult);
+                    }
+                }
+            }));
+        }
+    }
+
+    return result;
+}
+
+export async function findOverridesInTheme(
+    csDesignPath: CSDesignPath, 
+    addon: string, 
+    tDesignPath: string, 
+    theme: string,
+    workspaceRoot: string,
+    isOriginalAddon: boolean = false
+) : Promise<CSDesignPath | undefined> 
+{
+    const _tDesignPath = tDesignPath.replace(
+        THEME_FOLDER_PLACEHOLDER,
+        theme
+    );
+
+    const addonOvPath = addon.length > 0 
+        ? path.join(ADDON_CATALOG, addon, isOriginalAddon ? '' : overridesPath) 
+        : '';
+
+    const rPathToSearch = path.join(workspaceRoot, _tDesignPath, 
+        addonOvPath, csDesignPath.path);
+
+    if (await afs.exists(rPathToSearch)) {
+        const rCSDesignPath: CSDesignPath = {
+            addon: addon,
+            path: csDesignPath.path,
+            fullPath: rPathToSearch, 
+            templatePath: path.join(
+                workspaceRoot, 
+                _tDesignPath,
+                csDesignPath.path
+            ), //original file fullpath
+            designPath: _tDesignPath,
+            theme: theme
+        };
+
+        return rCSDesignPath;
+    }
+
+    return undefined;
+}
+
+export async function findOverridesInAltCatalog(
+    addon: string, 
+    result: CSDesignPath[],
+    workspaceRoot: string,
+    isOriginalAddon: boolean = false
+) : Promise<Array<CSDesignPath>> {
+    
+    if (result.length > 0) {
+        await Promise.all(
+            result.map(
+                async tFile => {
+                    const cResult = await findOverrideInAltCatalog(
+                        tFile,
+                        addon,
+                        workspaceRoot,
+                        isOriginalAddon
+                    );
+
+                    if (cResult !== undefined) {
+                        result.push(cResult);
+                    }
+                }
+            )
+        );
+    }
+
+    return result;
+}
+
+export async function findOverrideInAltCatalog(
+    csDesignPath: CSDesignPath, 
+    addon: string,
+    workspaceRoot: string,
+    isOriginalAddon: boolean = false
+) : Promise<CSDesignPath | undefined>
+{
+    const isInVarThemes = csDesignPath.fullPath.includes(
+        varThemeRepCatalog
+    );
+
+    if (
+        isInVarThemes
+        || csDesignPath.fullPath.includes(designThemesCatalog)
+    ) {
+        const rDesignPath = isInVarThemes 
+            ? csDesignPath.designPath.replace(
+                varThemeRepCatalog,
+                designThemesCatalog
+            ) 
+            : csDesignPath.designPath.replace(
+                designThemesCatalog,
+                varThemeRepCatalog
+            );
+        
+        const ovAddonPath = addon
+            ? path.join(ADDON_CATALOG, addon, isOriginalAddon ? '' : overridesPath)
+            : '';
+
+        const rPathToSearch = path.join(workspaceRoot, rDesignPath, 
+            ovAddonPath, csDesignPath.path);
+
+        if (await afs.exists(rPathToSearch)) {
+            const rCSDesignPath: CSDesignPath = {
+                addon: addon,
+                path: csDesignPath.path,
+                fullPath: rPathToSearch, 
+                templatePath: path.join(
+                    workspaceRoot, 
+                    rDesignPath,
+                    csDesignPath.path
+                ), //original file fullpath
+                designPath: rDesignPath,
+                theme: csDesignPath.theme
+            };
+
+            return rCSDesignPath;
+        }
+    }
+
+    return undefined;
 }
 
 export function toCSDesignPath(filepath: string, addon: string, workspaceRoot: string): CSDesignPath {

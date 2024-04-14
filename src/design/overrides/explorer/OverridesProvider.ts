@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as afs from '../../../utility/afs';
 import { AddonEntry, FileStat } from '../../../addons/explorer/AddonExplorer';
-import { CSDesignPath, designThemesCatalog, isOpenedFilesWithOverrides, varThemeRepCatalog } from '../OverridesFinder';
+import { CSDesignPath, designThemesCatalog, findOverrideInAltCatalog, findOverridesInAltCatalog, findOverridesInThemes, isOpenedFilesWithOverrides, varThemeRepCatalog } from '../OverridesFinder';
 import { Addon, getAddonItem } from '../../../treeview/AddonTreeItem';
 import { AddonReader } from '../../../addons/AddonReader';
 import { Core } from '../../../treeview/CoreTreeItem';
@@ -148,17 +148,68 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 				
 			} else if (this.originalElement.length > 0) {
 
+				var handled: string[] = [];
 				const oe = this.originalElement.filter(e => e.addon === element.addon);
 
 				if (oe.length > 0) {
-					oe.map(e => {
-						const entry: OverrideEntry = { 
-							uri: vscode.Uri.file(e.fullPath), 
-							type: vscode.FileType.File,
-							csPath: e.fullPath.replace(this.workspaceRoot, '')
-						};
-						result.push(entry);
-					});
+					await Promise.all(oe.map(async e => {
+
+						if (!handled.includes(e.path)){
+							if (
+								e.fullPath.includes(
+								designThemesCatalog
+								)
+								|| e.fullPath.includes(
+									varThemeRepCatalog
+								)
+							) {
+								handled.push(e.path);
+								var presult: Array<CSDesignPath> = [];
+	
+								await findOverridesInThemes(
+									{
+										addon: e.addon,
+										path: e.path,
+										fullPath: e.templatePath, 
+										templatePath: e.templatePath, //original file fullpath
+										designPath: e.designPath,
+										theme: e.theme
+									},
+									'',
+									presult,
+									this.workspaceRoot,
+									true
+								);
+	
+								if (presult.length > 0) {
+									await findOverridesInAltCatalog(
+										'',
+										presult,
+										this.workspaceRoot,
+										true
+									);
+								}
+	
+								if (presult.length > 0) {
+									presult.map(pr => {
+										const entry: OverrideEntry = { 
+											uri: vscode.Uri.file(pr.templatePath), 
+											type: vscode.FileType.File,
+											csPath: pr.templatePath.replace(this.workspaceRoot, '')
+										};
+										result.push(entry);
+									});
+								}
+							} else {
+								const entry: OverrideEntry = { 
+									uri: vscode.Uri.file(e.fullPath), 
+									type: vscode.FileType.File,
+									csPath: e.fullPath.replace(this.workspaceRoot, '')
+								};
+								result.push(entry);
+							}
+						}
+					}));
 				}
 			}
 
@@ -179,37 +230,58 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 			const result: OverrideEntry[] = [];
 
 			if (coreFile) {
-				const entry: OverrideEntry = { 
-					uri: vscode.Uri.file(coreFile.templatePath), 
-					type: vscode.FileType.File,
-					csPath: coreFile.templatePath.replace(this.workspaceRoot, '')
-				};
 
-				var rPath = '';
-
-				if (coreFile.templatePath.includes(designThemesCatalog)) {
-					rPath = coreFile.templatePath.replace(
-						designThemesCatalog,
-						varThemeRepCatalog
-					);
-				} else if (coreFile.templatePath.includes(varThemeRepCatalog)) {
-					rPath = coreFile.templatePath.replace(
-						varThemeRepCatalog,
+				if (coreFile.fullPath.includes(
 						designThemesCatalog
+					)
+					|| coreFile.fullPath.includes(
+						varThemeRepCatalog
+					)
+				) {
+					var presult: Array<CSDesignPath> = [];
+
+					presult = await findOverridesInThemes(
+						{
+							addon: '',
+							path: coreFile.path,
+							fullPath: coreFile.templatePath, 
+							templatePath: coreFile.templatePath, //original file fullpath
+							designPath: coreFile.designPath,
+							theme: coreFile.theme
+						},
+						'',
+						presult,
+						this.workspaceRoot
 					);
-				}
 
-				if (rPath.length > 0 && await afs.exists(rPath)) {
-					const rEntry: OverrideEntry = { 
-						uri: vscode.Uri.file(rPath), 
+					if (presult.length > 0) {
+						presult = await findOverridesInAltCatalog(
+							'',
+							presult,
+							this.workspaceRoot
+						);
+					}
+
+					if (presult.length > 0) {
+						presult.map(pr => {
+							const entry: OverrideEntry = { 
+								uri: vscode.Uri.file(pr.templatePath), 
+								type: vscode.FileType.File,
+								csPath: pr.templatePath.replace(this.workspaceRoot, '')
+							};
+							result.push(entry);
+						});
+					}
+					
+				} else {
+					const entry: OverrideEntry = { 
+						uri: vscode.Uri.file(coreFile.templatePath), 
 						type: vscode.FileType.File,
-						csPath: rPath.replace(this.workspaceRoot, '')
+						csPath: coreFile.templatePath.replace(this.workspaceRoot, '')
 					};
-
-					result.push(rEntry);
+	
+					result.push(entry);
 				}
-
-				result.push(entry);
 			}
 
 			result.sort((a, b) => {
@@ -244,10 +316,11 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 								result.push(getAddonItem(addon, this.addonReader));
 								const entry: CSDesignPath = { 
 									addon: addon,
-									path: coreFile.templatePath.replace(this.workspaceRoot, ''),
+									path: coreFile.path,
 									fullPath: coreFile.templatePath, 
 									templatePath: coreFile.templatePath,
-									designPath: coreFile.designPath 
+									designPath: coreFile.designPath,
+									theme: coreFile.theme
 								};
 				
 								this.originalElement.push(entry);
@@ -268,10 +341,11 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 								if (rPath.length > 0 && await afs.exists(rPath)) {
 									const rEntry: CSDesignPath = { 
 										addon: addon,
-										path: rPath.replace(this.workspaceRoot, ''),
+										path: coreFile.path,
 										fullPath: rPath, 
 										templatePath: rPath,
-										designPath: coreFile.designPath 
+										designPath: coreFile.designPath ,
+										theme: coreFile.theme
 									};
 
 									this.originalElement.push(rEntry);
