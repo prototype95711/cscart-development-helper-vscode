@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { AddonReader } from './AddonReader';
+import { AddonReader } from '../addons/AddonReader';
 
 export const UNKNOWN_ADDON_VALUE = 'unknown_addon';
 export const ADDON_CONTEXT_VALUE = 'addon';

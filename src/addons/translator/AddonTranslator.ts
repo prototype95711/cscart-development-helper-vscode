@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { VAR_CATALOG, VAR_LANGS, VAR_LANG_FILE_EXTENSION, getTranslateFilePath, getTranslatesPath } from "./AddonFiles";
-import { AddonPath } from "./AddonPath";
-import { Addon } from './AddonTreeItem';
-import * as afs from '../utility/afs';
-import { BASE_LANGUAGE, DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../utility/languages";
+import { VAR_CATALOG, VAR_LANGS, VAR_LANG_FILE_EXTENSION, getTranslateFilePath, getTranslatesPath } from "../files/AddonFiles";
+import { AddonPath } from "../files/AddonPath";
+import { Addon } from '../../treeview/AddonTreeItem';
+import * as afs from '../../utility/afs';
+import { BASE_LANGUAGE, DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../../utility/languages";
 import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
-import { AddonReader } from './AddonReader';
+import { AddonReader } from '../AddonReader';
 import { LangVarsFinder } from './LangVarsFinder';
+
 
 export class AddonTranslator {
     private parsedSelectedLanguages: string[] = [];

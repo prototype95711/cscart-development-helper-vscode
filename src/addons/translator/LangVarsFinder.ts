@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { IPatternInfo, ISearchRange, ITextSearchMatch, getFileResults, resultIsMatch } from '../search/searchInFiles';
-import { readDirectory } from '../utility/afs';
-import { createRegExp } from '../utility/strings';
-import { AddonReader } from './AddonReader';
-import * as afs from '../utility/afs';
+import { IPatternInfo, ISearchRange, ITextSearchMatch, getFileResults, resultIsMatch } from '../../search/searchInFiles';
+import { readDirectory } from '../../utility/afs';
+import { createRegExp } from '../../utility/strings';
+import { AddonReader } from '../AddonReader';
+import * as afs from '../../utility/afs';
 import path from 'path';
 
 const fileExtensionsWithLangvars = ['.php', '.tpl', '.js', '.xml'];

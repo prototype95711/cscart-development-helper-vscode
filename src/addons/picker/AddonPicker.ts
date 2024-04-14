@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { window } from 'vscode';
 
-import { AddonReader } from './AddonReader';
-import { AddonExplorer } from './AddonExplorer';
+import { AddonReader } from '../AddonReader';
+import { AddonExplorer } from '../explorer/AddonExplorer';
 
 /**
  * Shows a addon list

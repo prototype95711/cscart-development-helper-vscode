@@ -4,7 +4,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
-import { FileStat } from '../addons/AddonExplorer';
+import { FileStat } from '../addons/explorer/AddonExplorer';
 import path from 'path';
 import * as rimraf from 'rimraf';
 

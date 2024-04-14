@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ADDON_CATALOG, getAddonDesignPathes, getAddonJsPath, getAddonPath, getAddonXmlPath, getAddonsPath, getTranslatesPath } from './AddonFiles'; 
-import { AddonPath, pathExists } from './AddonPath';
+import { getAddonDesignPathes, getAddonJsPath, getAddonPath, getAddonXmlPath, getAddonsPath, getTranslatesPath } from './files/AddonFiles'; 
+import { AddonPath, pathExists } from './files/AddonPath';
 
 const { parseString } = require('xml2js');
 

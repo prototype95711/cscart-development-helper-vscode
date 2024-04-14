@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { AddonEntry } from '../AddonExplorer';
+import { AddonEntry } from './AddonExplorer';
 
 export class AddonFileDecorationProvider implements vscode.FileDecorationProvider {
 

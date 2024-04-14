@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import * as afs from '../utility/afs';
+import * as afs from '../../utility/afs';
 
-import { AddonReader } from './AddonReader';
-import { ADDON_CATALOG, DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes } from './AddonFiles';
-import { readDirectory } from '../utility/afs';
+import { AddonReader } from '../../addons/AddonReader';
+import { ADDON_CATALOG, DESIGN_BACKEND_CATALOG, DESIGN_CATALOG, DESIGN_MAIL_CATALOG, DESIGN_PARTS, DESIGN_TEMPLATES_CATALOG, DESIGN_THEMES_CATALOG, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG, getAddonDesignPathes } from '../../addons/files/AddonFiles';
+import { readDirectory } from '../../utility/afs';
 import path from 'path';
 import { Console } from 'console';
 

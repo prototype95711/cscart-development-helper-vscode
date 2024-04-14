@@ -4,7 +4,7 @@
   "description": "Unofficial extension for CS-Cart developers",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.89.0"
+    "vscode": "^1.88.0"
   },
   "categories": [
     "Other"
@@ -39,10 +39,6 @@
     },
     "commands": [
       {
-        "command": "cscart-development-helper.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "csAddonExplorer.findOverrides",
         "title": "Find Overrides"
       },
@@ -68,11 +64,7 @@
       },
       {
         "command": "csAddonExplorer.openAddon",
-        "title": "Open addon",
-        "icon": {
-					"light": "resources/light/addon.svg",
-					"dark": "resources/dark/addon.svg"
-				}
+        "title": "Open addon"
       },
       {
         "command": "csAddonExplorer.openFile",

@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as afs from '../utility/afs';
-import { AddonEntry, FileStat } from './AddonExplorer';
-import { CSDesignPath, isOpenedFilesWithOverrides } from './OverridesFinder';
-import { Addon, getAddonItem } from './AddonTreeItem';
-import { AddonReader } from './AddonReader';
-import { Core } from './CoreTreeItem';
-import { ADDON_CATALOG } from './AddonFiles';
+import * as afs from '../../../utility/afs';
+import { AddonEntry, FileStat } from '../../../addons/explorer/AddonExplorer';
+import { CSDesignPath, isOpenedFilesWithOverrides } from '../OverridesFinder';
+import { Addon, getAddonItem } from '../../../treeview/AddonTreeItem';
+import { AddonReader } from '../../../addons/AddonReader';
+import { Core } from '../../../treeview/CoreTreeItem';
+import { ADDON_CATALOG } from '../../../addons/files/AddonFiles';
 
 export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core | OverrideEntry>, vscode.FileSystemProvider {
 	private cache: CachedOverridesList[] = [];

@@ -2,19 +2,17 @@ import * as vscode from 'vscode';
 
 import { AddonReader } from './addons/AddonReader';
 
-import { AddonExplorer, selectAddon } from './addons/AddonExplorer';
-import { showAddonPicker } from './addons/AddonPicker';
-
-import * as messages from './addons/AddonMessages';
-import { AddonFileDecorationProvider } from './addons/files/Decorator';
+import { AddonExplorer, selectAddon } from './addons/explorer/AddonExplorer';
+import { showAddonPicker } from './addons/picker/AddonPicker';
+import { AddonFileDecorationProvider } from './addons/explorer/Decorator';
 
 import path from 'path';
 import * as afs from './utility/afs';
 
-import { AddonsConfiguration, CONFIGURATION_FILE } from './addons/config/addonsConfiguration';
+import { AddonsConfiguration, CONFIGURATION_FILE } from './configuration/addonsConfiguration';
 import { anyEvent, filterEvent, relativePath } from './utility/events';
-import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './addons/OverridesFinder';
-import { OverridesProvider } from './addons/OverridesProvider';
+import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './design/overrides/OverridesFinder';
+import { OverridesProvider } from './design/overrides/explorer/OverridesProvider';
 
 let disposables: vscode.Disposable[] = [];
 
@@ -264,24 +262,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(fileDecorationProvider);
 
 	} else {
-		vscode.window.showInformationMessage(messages.NO_ADDONS_IN_WORKSPACE_ERROR);
+		vscode.window.showInformationMessage(vscode.l10n.t("No CS-Cart addons in workspace"));
 		return;
 	}
-	
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "cscart-development-helper" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('cscart-development-helper.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from CSCart Development Helper!');
-	});
-
-	context.subscriptions.push(disposable);
 }
 
 // This method is called when your extension is deactivated

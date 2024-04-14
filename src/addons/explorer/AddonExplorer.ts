@@ -4,17 +4,17 @@ import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
 import * as rimraf from 'rimraf';
 
-import { AddonReader } from './AddonReader';
-import { Addon, getAddonItem } from './AddonTreeItem';
-import { ClipboardService } from '../utility/clipboardService';
-import { IClipboardService } from '../utility/IClipboardService';
-import { isEqual, isEqualOrParent, rtrim } from '../utility/strings';
+import { AddonReader } from '../AddonReader';
+import { Addon, getAddonItem } from '../../treeview/AddonTreeItem';
+import { ClipboardService } from '../../utility/clipboardService';
+import { IClipboardService } from '../../utility/IClipboardService';
+import { isEqual, isEqualOrParent, rtrim } from '../../utility/strings';
 import { posix } from 'path/posix';
-import { ResourceFileEdit } from '../utility/resourceFileEdit';
-import { AddonsConfiguration, CONFIGURATION_FILE } from './config/addonsConfiguration';
-import { AddonTranslator } from './AddonTranslator';
-import { AddonPath } from './AddonPath';
-import { ADDON_CATALOG } from './AddonFiles';
+import { ResourceFileEdit } from '../../utility/resourceFileEdit';
+import { AddonsConfiguration, CONFIGURATION_FILE } from '../../configuration/addonsConfiguration';
+import { AddonTranslator } from '../translator/AddonTranslator';
+import { AddonPath } from '../files/AddonPath';
+import { ADDON_CATALOG } from '../files/AddonFiles';
 
 const CSCART_ROOT_FOLDER_PLACEHOLDER = '$storeFolder$';
 
