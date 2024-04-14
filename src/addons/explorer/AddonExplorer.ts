@@ -143,31 +143,6 @@ export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 	addonExplorer.add(addon);
 }
 
-/**
-	 * Label describing the {@link TreeItem Tree item}
-	 */
-export class TreeItemLabelCustom implements vscode.TreeItemLabel {
-
-	/**
-	 * A human-readable string describing the {@link TreeItem Tree item}.
-	 */
-	label: string = '';
-
-	/**
-	 * Ranges in the label to highlight. A range is defined as a tuple of two number where the
-	 * first is the inclusive start index and the second the exclusive end index
-	 */
-	highlights?: Array<[number, number]>;
-
-	strikethrough?: boolean;
-
-	constructor(label: string, highlights: Array<[number, number]>, strikethrough: boolean) {
-		this.label = label;
-		this.highlights = highlights;
-		this.strikethrough = strikethrough;
-	}
-}
-
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
 	private _hasFilesToPaste: ContextKey;
 
@@ -284,7 +259,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			if (element.type === vscode.FileType.File) {
 				treeItem.command = { 
 					command: 'csAddonExplorer.openFile', 
-					title: "Open File", 
+					title: vscode.l10n.t("Open File"), 
 					arguments: [element.uri] 
 				};
 				treeItem.contextValue = 'file';
@@ -302,11 +277,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			}
 			
 			if (element.compactOffset) {
-				const _label: vscode.TreeItemLabel = new TreeItemLabelCustom(
-					treeItem?.label?.toString() ?? 'p',
-					[],
-					true
-				);
 				treeItem.label = element.uri.path.split('/').slice(-element.compactOffset).join('/');
 			}
 
@@ -1384,7 +1354,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						elementUri.path !== fileToPaste.path
 						&& isEqualOrParent(elementUri.path, fileToPaste.path)
 					) {
-						throw new Error("File to paste is an ancestor of the destination folder");
+						throw new Error(vscode.l10n.t("File to paste is an ancestor of the destination folder"));
 					}
 					const fileToPasteStat = await _.stat(fileToPaste.path);
 		
@@ -1452,7 +1422,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						undoLabel: sourceTargetPairs.length > 1 ? nls.localize({ key: 'copyBulkEdit', comment: ['Placeholder will be replaced by the number of files being copied'] }, "Paste {0} files", sourceTargetPairs.length)
 							: nls.localize({ key: 'copyFileBulkEdit', comment: ['Placeholder will be replaced by the name of the file copied.'] }, "Paste {0}", resources.basenameOrAuthority(sourceTargetPairs[0].target))
 					};
-					await explorerService.applyBulkEdit(resourceFileEdits, options);*/
+					await this.applyBulkEdit(resourceFileEdits, options);*/
 				}
 	
 				const pair = sourceTargetPairs[0];

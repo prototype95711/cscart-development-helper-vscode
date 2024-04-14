@@ -25,7 +25,7 @@
       "activitybar": [
         {
           "id": "cs-addon-explorer",
-          "title": "CS-Cart Addon Explorer",
+          "title": "%addon_explorer.title%",
           "icon": "media/addon.svg"
         }
       ],
@@ -40,47 +40,47 @@
     "commands": [
       {
         "command": "csAddonExplorer.findOverrides",
-        "title": "Find Overrides"
+        "title": "%overrides.find%"
       },
       {
         "command": "csAddonExplorer.normalizeLangVars",
-        "title": "Normalize translate files..."
+        "title": "%addon_explorer.normalize_translates%"
       },
       {
         "command": "csAddonExplorer.translateAddon",
-        "title": "Translate..."
+        "title": "%addon_explorer.translate%"
       },
       {
         "command": "csAddonExplorer.closeAddon",
-        "title": "Close"
+        "title": "%addon_explorer.close%"
       },
       {
         "command": "csAddonExplorer.newFile",
-        "title": "New file..."
+        "title": "%addon_explorer.files.newFile%"
       },
       {
         "command": "csAddonExplorer.newFolder",
-        "title": "New folder..."
+        "title": "%addon_explorer.files.newFolder%"
       },
       {
         "command": "csAddonExplorer.openAddon",
-        "title": "Open addon"
+        "title": "%addon_explorer.files.openAddon%"
       },
       {
         "command": "csAddonExplorer.openFile",
-        "title": "Open file"
+        "title": "%addon_explorer.files.openFile%"
       },
       {
         "command": "csAddonExplorer.openWith",
-        "title": "Open with..."
+        "title": "%addon_explorer.files.openWith%"
       },
       {
         "command": "csAddonExplorer.openFileToSide",
-        "title": "Open to the Side"
+        "title": "%addon_explorer.files.openFileToSide%"
       },
       {
         "command": "csAddonExplorer.revealFileInExplorer",
-        "title": "Reveal in explorer"
+        "title": "%addon_explorer.files.revealFileInExplorer%"
       },
       {
         "command": "csAddonExplorer.revealFileInOS.linux",
@@ -96,43 +96,43 @@
       },
       {
         "command": "csAddonExplorer.copyPath",
-        "title": "Copy Path"
+        "title": "%addon_explorer.files.copyPath%"
       },
       {
         "command": "csAddonExplorer.copyRelativeFilePath",
-        "title": "Copy Relative Path"
+        "title": "%addon_explorer.files.copyRelativeFilePath%"
       },
       {
         "command": "csAddonExplorer.cut",
-        "title": "Cut"
+        "title": "%addon_explorer.files.cut%"
       },
       {
         "command": "csAddonExplorer.copy",
-        "title": "Copy"
+        "title": "%addon_explorer.files.copy%"
       },
       {
         "command": "csAddonExplorer.paste",
-        "title": "Paste"
+        "title": "%addon_explorer.files.paste%"
       },
       {
         "command": "csAddonExplorer.findInFolder",
-        "title": "Find in Folder..."
+        "title": "%addon_explorer.files.findInFolder%"
       },
       {
         "command": "csAddonExplorer.rename",
-        "title": "Rename..."
+        "title": "%addon_explorer.files.rename%"
       },
       {
         "command": "csAddonExplorer.delete",
-        "title": "Delete"
+        "title": "%addon_explorer.files.delete%"
       },
       {
         "command": "overridesProvider.openFile",
-        "title": "Open file"
+        "title": "%overrides.openFile%"
       },
       {
 				"command": "csAddonExplorer.refresh",
-				"title": "Refresh",
+				"title": "%addon_explorer.refresh%",
 				"icon": {
 					"light": "resources/light/refresh.svg",
 					"dark": "resources/dark/refresh.svg"
@@ -140,7 +140,7 @@
 			},
       {
 				"command": "csOverridesList.refresh",
-				"title": "Find now",
+				"title": "%overrides.refresh%",
 				"icon": {
 					"light": "resources/light/refresh.svg",
 					"dark": "resources/dark/refresh.svg"
@@ -286,17 +286,17 @@
       "cs-addon-explorer": [
         {
           "id": "csAddonExplorer",
-          "name": "CS-Cart Addons",
+          "name": "%cs_cart_addons%",
           "icon": "media/addon.svg",
-          "contextualTitle": "Addons"
+          "contextualTitle": "%addons%"
         }
       ],
       "cs-overrides-view": [
         {
           "id": "csOverridesList",
-          "name": "CS-Cart Overrides List",
+          "name": "%overrides.list.title%",
           "icon": "media/addon.svg",
-          "contextualTitle": "Overrides",
+          "contextualTitle": "%overrides.title%",
           "visibility": "visible",
           "when": "isMayBeCSOverrides"
         }
@@ -333,5 +333,6 @@
     "rimraf": "^5.0.5",
     "translate-google-fixed-api": "^1.0.1",
     "xml2js": "0.5.0"
-  }
+  },
+  "l10n": "./l10n"
 }
