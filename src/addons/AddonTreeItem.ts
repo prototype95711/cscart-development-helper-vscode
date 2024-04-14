@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { AddonReader } from './AddonReader';
 
+export const UNKNOWN_ADDON_VALUE = 'unknown_addon';
+export const ADDON_CONTEXT_VALUE = 'addon';
+
 export function getAddonItem(
     addon: string, 
     addonReader: AddonReader, 
@@ -15,6 +18,7 @@ export function getAddonItem(
 export class Addon extends vscode.TreeItem {
 
 	public addon: string = '';
+	public schemeVersion: string = '';
 
 	constructor(
 		public label: string,
@@ -24,6 +28,8 @@ export class Addon extends vscode.TreeItem {
 	) {
 		super(label, collapsibleState);
 
+		this.schemeVersion = this.data?.addon?.$?.scheme;
+
 		this.addon = label;
 		this.tooltip = `${this.label}`;
 		this.description = '';
@@ -32,12 +38,15 @@ export class Addon extends vscode.TreeItem {
 			this.tooltip += `-${this.data.addon.version}`;
 			this.description = this.data.addon.version;
 		}
+
+		if (this.schemeVersion === '3.0' || this.schemeVersion === '4.0') {
+			this.contextValue = ADDON_CONTEXT_VALUE;
+		}
 	}
 
 	iconPath = {
 		light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'addon.svg'),
 		dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'addon.svg')
 	};
-
-	contextValue = 'addon';
+	contextValue = UNKNOWN_ADDON_VALUE;
 }

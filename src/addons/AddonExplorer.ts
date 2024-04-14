@@ -913,6 +913,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		await addonTranslator.translate();
 	}
 
+	public async closeAddon(resource: Addon) {
+		this._selectedAddons = this._selectedAddons.filter(a => a !== resource.addon);
+		this.refresh();
+		this.saveCurrentConfiguration();
+	}
+
 	private initAddonTranslateFile(resource: Addon) : AddonTranslator {
 		const addonTranslator = new AddonTranslator(
 			this.addonReader,

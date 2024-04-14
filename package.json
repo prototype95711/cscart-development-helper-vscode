@@ -14,6 +14,13 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "keybindings": [
+      {
+				"command": "csAddonExplorer.focus",
+				"key": "ctrl+shift+a",
+				"mac": "cmd+shift+a"
+			}
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -48,6 +55,10 @@
         "title": "Translate..."
       },
       {
+        "command": "csAddonExplorer.closeAddon",
+        "title": "Close"
+      },
+      {
         "command": "csAddonExplorer.newFile",
         "title": "New file..."
       },
@@ -56,8 +67,12 @@
         "title": "New folder..."
       },
       {
-        "command": "csAddonExplorer.open",
-        "title": "Open addon"
+        "command": "csAddonExplorer.openAddon",
+        "title": "Open addon",
+        "icon": {
+					"light": "resources/light/addon.svg",
+					"dark": "resources/dark/addon.svg"
+				}
       },
       {
         "command": "csAddonExplorer.openFile",
@@ -150,8 +165,9 @@
 			],
       "view/title": [
         {
-          "command": "csAddonExplorer.open",
-          "when": "view == csAddonExplorer"
+          "command": "csAddonExplorer.openAddon",
+          "when": "view == csAddonExplorer",
+          "group": "navigation"
         },
         {
 					"command": "csAddonExplorer.refresh",
@@ -174,6 +190,11 @@
           "command": "csAddonExplorer.translateAddon",
           "when": "view == csAddonExplorer && viewItem == addon",
           "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.closeAddon",
+          "when": "view == csAddonExplorer && (viewItem == addon || viewItem == unknown_addon)",
+          "group": "8_modification"
         },
         {
           "command": "csAddonExplorer.newFile",

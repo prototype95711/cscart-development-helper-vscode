@@ -32,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const addonExplorer = new AddonExplorer(addonReader);
 		vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
 		context.subscriptions.push(
-			vscode.commands.registerCommand('csAddonExplorer.open', () => showAddonPicker(
+			vscode.commands.registerCommand('csAddonExplorer.openAddon', () => showAddonPicker(
 				addonReader, 
 				addonExplorer, 
 				selectAddon
@@ -137,7 +137,6 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 			)
 		);
-
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.normalizeLangVars', 
 			(resource) => addonExplorer.normalizeTranslateFiles(resource)
@@ -145,6 +144,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.translateAddon', 
 			(resource) => addonExplorer.translateAddon(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.closeAddon', 
+			(resource) => addonExplorer.closeAddon(resource)
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.newFile', 
