@@ -1,4 +1,5 @@
 {
+  "Failed to initialize a CS Development Helper configuration.": "Failed to initialize a CS Development Helper configuration.",
   "No overrides founded": "No overrides founded",
   "No CS-Cart addons in workspace": "No CS-Cart addons in workspace",
   "CS-Cart": "CS-Cart",
@@ -10,6 +11,8 @@
   "Normalization of lang vars...": "Normalization of lang vars...",
   "Translating lang vars...": "Translating lang vars...",
   "Saving translation files...": "Saving translation files...",
+  "Translating lang vars for {lang_code}...": "Translating lang vars for {lang_code}...",
+  "Translating lang var {lang_var_id}...": "Translating lang var {lang_var_id}...",
   "Cutted in CS-Cart Addon Explorer": "Cutted in CS-Cart Addon Explorer",
   "Enter the folder name": "Enter the folder name",
   "Enter the file name": "Enter the file name",

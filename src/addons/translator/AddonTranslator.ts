@@ -87,7 +87,7 @@ export class AddonTranslator {
 
                 if (needTranslate) {
                     progress.report({ increment: 30, message: vscode.l10n.t("Translating lang vars...") });
-                    await this.translateLangVars();
+                    await this.translateLangVars(progress);
                 }
     
                 progress.report({ increment: 40, message: vscode.l10n.t("Saving translation files...") });
@@ -179,17 +179,28 @@ export class AddonTranslator {
         );
     }
 
-    protected async translateLangVars() {
+    protected async translateLangVars(progress: vscode.Progress<any> | undefined = undefined) {
         if (!this.selectedLanguages?.length) {
             return;
         }
 
+        const inProgress = progress !== undefined;
+
         for (const sl of this.selectedLanguages) {
-            await this.translateLangVarsForLanguage(sl);
+
+            if (inProgress) {
+                progress?.report({ increment: 1, message: vscode.l10n.t("Translating lang vars for {lang_code}...", {lang_code: sl}) });
+            }
+
+            await this.translateLangVarsForLanguage(sl, progress);
         }
     }
 
-    protected async translateLangVarsForLanguage(lang_code: string): Promise<void> {
+    protected async translateLangVarsForLanguage(
+        lang_code: string, 
+        progress: vscode.Progress<any> | undefined = undefined
+    ): Promise<void> {
+        const inProgress = progress !== undefined;
         var toTranslate = this.langvars.filter(
             lv => {
                 const index = lv[1].values.findIndex(v => {
@@ -225,6 +236,13 @@ export class AddonTranslator {
                 const _key = translatedStrings.findIndex(ts => {return ts.id === valWithId?.id;});
 
                 if (_key === -1) {
+
+                    if (inProgress) {
+                        progress?.report(
+                            { increment: 1, message: vscode.l10n.t("Translating lang var {lang_var_id}...", {lang_var_id: valWithId.id}) }
+                        );
+                    }
+
                     result = await translate(valWithId.id, {
                         tld: "ru",
                         to: lang_code
@@ -531,8 +549,13 @@ export class AddonTranslator {
                     _langvar = default_langvar;
 
                 } else if (_langvar === undefined && default_langvar !== undefined) {
-                    _langvar = default_langvar;
-                    _langvar.value = [default_langvar.id];
+                    _langvar = {
+                        lang_code: lang_code,
+                        id: default_langvar.id,
+                        value: [],
+                        plural: '',
+                        comments: default_langvar.comments
+                    };
                 } else if (default_langvar === undefined && _langvar !== undefined ) {
                     default_langvar = _langvar;
                     default_langvar.value = [_langvar.id];

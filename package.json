@@ -322,14 +322,11 @@
     "@types/vscode": "^1.84.0",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
-    "@vscode/test-electron": "^2.3.6",
     "eslint": "^8.52.0",
-    "glob": "^10.3.10",
     "mocha": "^10.2.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@memorize/vscode": "^0.9.1",
     "content-type": "^1.0.5",
     "encoding": "^0.1.13",
     "mkdirp": "^0.5.1",

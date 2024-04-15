@@ -24,6 +24,10 @@ Latest version of Visual Studio Code
 
 ## Release Notes
 
+### 0.0.2
+
+Fixes for translating script
+
 ### 0.0.1
 
 First beta-release

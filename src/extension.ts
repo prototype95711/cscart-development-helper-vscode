@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				conf.map(c => addonExplorer.applyConfiguration(c, rootFolder));
 			}
 		} catch (err) {
-			console.log('Failed to initialize a CS Development Helper configuration.');
+			vscode.window.showErrorMessage(vscode.l10n.t("Failed to initialize a CS Development Helper configuration."));
 		}
 
 		const view = vscode.window.createTreeView(
