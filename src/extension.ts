@@ -24,6 +24,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		? rootFolder.uri.path : undefined;
 
 	if (rootFolder && rootPath) {
+		vscode.commands.executeCommand('setContext', 'isCsCartWorkspaces', true);
+
 		// Register addons explorer
 		const addonReader = new AddonReader(rootPath);
 
@@ -42,7 +44,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		try {
 			const conf = await getDataFromConfigurationFiles(context);
-			conf.map(c => addonExplorer.applyConfiguration(c, rootFolder));
+
+			if (conf.length > 0) {
+				conf.map(c => addonExplorer.applyConfiguration(c, rootFolder));
+			}
 		} catch (err) {
 			console.log('Failed to initialize a CS Development Helper configuration.');
 		}
@@ -262,6 +267,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(fileDecorationProvider);
 
 	} else {
+		vscode.commands.executeCommand('setContext', 'isCsCartWorkspaces', false);
 		vscode.window.showInformationMessage(vscode.l10n.t("No CS-Cart addons in workspace"));
 		return;
 	}

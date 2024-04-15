@@ -5,9 +5,9 @@ import { AddonPath } from "../files/AddonPath";
 import { Addon } from '../../treeview/AddonTreeItem';
 import * as afs from '../../utility/afs';
 import { BASE_LANGUAGE, DEFAULT_LANGUAGE, LANGUAGE_CODE_LENGTH, getLanguagePickerList, languages } from "../../utility/languages";
-import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from "gettext-parser";
 import { AddonReader } from '../AddonReader';
 import { LangVarsFinder } from './LangVarsFinder';
+import { GetTextComment, GetTextTranslation, GetTextTranslations, po } from '../../../lib/gettext-parser';
 
 
 export class AddonTranslator {

@@ -223,17 +223,23 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	async applyConfiguration(configuration: AddonsConfiguration, workspaceFolder: vscode.WorkspaceFolder): Promise<void>
 	{
 		this._selectedAddons = [];
-		configuration.selectedAddons.map(
-			addon => this.openAddon(addon)
-		);
 
-		configuration.expandedElements.map(
-			e =>  {
-				if (this.expanded.indexOf(e) === -1) {
-					this.expanded.push(e);
+		if (configuration.selectedAddons?.length > 0) {
+			configuration.selectedAddons.map(
+				addon => this.openAddon(addon)
+			);
+		}
+
+		if (configuration.expandedElements?.length > 0) {
+			configuration.expandedElements.map(
+				e =>  {
+					if (this.expanded.indexOf(e) === -1) {
+						this.expanded.push(e);
+					}
 				}
-			}
-		);
+			);
+		}
+		
 		this.refresh();
 	}
 

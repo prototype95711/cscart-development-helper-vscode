@@ -13,16 +13,16 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:plaintext"
+    "onCommand:addonExplorer.openAddon"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "keybindings": [
       {
-				"command": "csAddonExplorer.focus",
-				"key": "ctrl+shift+a",
-				"mac": "cmd+shift+a"
-			}
+        "command": "csAddonExplorer.focus",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
@@ -134,46 +134,46 @@
         "title": "%overrides.openFile%"
       },
       {
-				"command": "csAddonExplorer.refresh",
-				"title": "%addon_explorer.refresh%",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
-			},
+        "command": "csAddonExplorer.refresh",
+        "title": "%addon_explorer.refresh%",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
       {
-				"command": "csOverridesList.refresh",
-				"title": "%overrides.refresh%",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
-			}
+        "command": "csOverridesList.refresh",
+        "title": "%overrides.refresh%",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      }
     ],
     "menus": {
       "editor/context": [
-				{
-					"command": "csAddonExplorer.findOverrides",
-					"when": "isMayBeCSOverrides",
-					"group": "navigation@1.31"
-				}
-			],
+        {
+          "command": "csAddonExplorer.findOverrides",
+          "when": "isMayBeCSOverrides && isCsCartWorkspaces",
+          "group": "navigation@1.31"
+        }
+      ],
       "view/title": [
         {
           "command": "csAddonExplorer.openAddon",
-          "when": "view == csAddonExplorer",
+          "when": "view == csAddonExplorer && isCsCartWorkspaces",
           "group": "navigation"
         },
         {
-					"command": "csAddonExplorer.refresh",
-					"when": "view == csAddonExplorer",
-					"group": "navigation"
-				},
+          "command": "csAddonExplorer.refresh",
+          "when": "view == csAddonExplorer && isCsCartWorkspaces",
+          "group": "navigation"
+        },
         {
-					"command": "csOverridesList.refresh",
-					"when": "view == csOverridesList",
-					"group": "navigation"
-				}
+          "command": "csOverridesList.refresh",
+          "when": "view == csOverridesList && isCsCartWorkspaces",
+          "group": "navigation"
+        }
       ],
       "view/item/context": [
         {
@@ -311,29 +311,31 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/gettext-parser": "4.0.4",
     "@types/mkdirp": "^0.5.2",
     "@types/mocha": "^10.0.3",
     "@types/node": "18.x",
+    "@types/readable-stream": "^4.0.11",
     "@types/rimraf": "^4.0.5",
     "@types/vscode": "^1.84.0",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "@vscode/test-electron": "^2.3.6",
     "eslint": "^8.52.0",
-    "gettext-parser": "4.0.0",
     "glob": "^10.3.10",
     "mocha": "^10.2.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {
     "@memorize/vscode": "^0.9.1",
+    "content-type": "^1.0.5",
+    "encoding": "^0.1.13",
     "mkdirp": "^0.5.1",
+    "readable-stream": "^4.5.2",
     "rimraf": "^5.0.5",
+    "safe-buffer": "^5.2.1",
     "translate-google-fixed-api": "^1.0.1",
     "xml2js": "0.5.0"
   },
