@@ -13,6 +13,7 @@ import { AddonsConfiguration, CONFIGURATION_FILE } from './configuration/addonsC
 import { anyEvent, filterEvent, relativePath } from './utility/events';
 import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './design/overrides/OverridesFinder';
 import { OverridesProvider } from './design/overrides/explorer/OverridesProvider';
+import { Addon } from './treeview/AddonTreeItem';
 
 let disposables: vscode.Disposable[] = [];
 
@@ -140,6 +141,14 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 			)
 		);
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.collapseAddonItems', 
+			(resource: Addon) => {
+				addonExplorer.closeAddon(resource);
+				addonExplorer.collapseAddonFiles(resource);
+				addonExplorer.openAddon(resource.addon);
+			}
+		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.normalizeLangVars', 
 			(resource) => addonExplorer.normalizeTranslateFiles(resource)

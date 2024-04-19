@@ -46,6 +46,10 @@
         "title": "%overrides.find%"
       },
       {
+        "command": "csAddonExplorer.collapseAddonItems",
+        "title": "%addon_explorer.collapse_addon%"
+      },
+      {
         "command": "csAddonExplorer.normalizeLangVars",
         "title": "%addon_explorer.normalize_translates%"
       },
@@ -176,6 +180,11 @@
         }
       ],
       "view/item/context": [
+        {
+					"command": "csAddonExplorer.collapseAddonItems",
+					"when": "view == csAddonExplorer && viewItem == addon",
+					"group": "inline"
+				},
         {
           "command": "csAddonExplorer.normalizeLangVars",
           "when": "view == csAddonExplorer && viewItem == addon",

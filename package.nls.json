@@ -5,6 +5,7 @@
 	"addons": "Addons",
 	"cs_cart_addons": "CS-Cart Addons",
 	"addon_explorer.title": "CS-Cart Addon Explorer",
+	"addon_explorer.collapse_addon": "Collapse addon files",
 	"addon_explorer.normalize_translates": "Normalize translate files...",
 	"addon_explorer.translate": "Translate...",
 	"addon_explorer.close": "Close",

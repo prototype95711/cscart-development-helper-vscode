@@ -879,6 +879,29 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
+	public async collapseAddonFiles(resource: Addon) {
+		
+		var hasChanges = false;
+
+		this.expanded = this.expanded.filter(e => e !== resource.addon);
+		
+		this.tree.map(t => {
+			if (t?.addon === resource.addon) {
+				const rPath = t?.uri?.path;
+
+				if (rPath) {
+					this.expanded = this.expanded.filter(e => e !== rPath);
+					hasChanges = true;
+				}
+			}
+		});
+		
+		if (hasChanges) {
+			this.saveCurrentConfiguration();
+			this.refresh();
+		}
+	}
+
 	public async normalizeTranslateFiles(resource: Addon) {
 		const addonTranslator = this.initAddonTranslateFile(resource);
 		await addonTranslator.normalize();
@@ -890,9 +913,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public async closeAddon(resource: Addon) {
-		this._selectedAddons = this._selectedAddons.filter(a => a !== resource.addon);
+		this._closeAddon(resource);
 		this.refresh();
 		this.saveCurrentConfiguration();
+	}
+
+	public async _closeAddon(resource: Addon) {
+		this._selectedAddons = this._selectedAddons.filter(a => a !== resource.addon);
 	}
 
 	private initAddonTranslateFile(resource: Addon) : AddonTranslator {
