@@ -3,7 +3,7 @@
 Working with addons in a separate section, automatic search and translation of language variables, search for smarty template overrides and more.
 
 ## Features
-override
+
 This extension adds a new container for working with addons. It allows:
 
 - Work with files of selected addons separately from the project.
