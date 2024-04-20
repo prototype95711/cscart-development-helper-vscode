@@ -51,6 +51,8 @@ export class AddonTranslator {
         langPick.canSelectMany = true;
         langPick.items = getLanguagePickerList(this.getDefaultSelectedSet());
         langPick.selectedItems = langPick.items.filter(item => item.picked);
+        langPick.title = vscode.l10n.t("Select languages...");
+        langPick.placeholder = vscode.l10n.t("English as default language always selected");
 
         langPick.onDidChangeSelection(selection => {
             if (selection?.length > 0) {
