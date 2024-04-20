@@ -5,6 +5,18 @@ All notable changes to the "cscart-development-helper" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3]
+
+### Added
+
+- Collapse addon files
+- Translate picker description
+
+### Fixed
+
+- Fix normalizing translate files without line break in header
+- Refresh only addon files in some cases
+
 ## [0.0.2]
 
 ### Added

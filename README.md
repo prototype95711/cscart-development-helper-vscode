@@ -24,6 +24,11 @@ Latest version of Visual Studio Code
 
 ## Release Notes
 
+### 0.0.3
+
+Fixes for normalizing
+Collapse addon
+
 ### 0.0.2
 
 Fixes for translating script
