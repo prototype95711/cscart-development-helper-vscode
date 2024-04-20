@@ -5,7 +5,7 @@
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.84.0"
   },
@@ -186,10 +186,10 @@
       ],
       "view/item/context": [
         {
-					"command": "csAddonExplorer.collapseAddonItems",
-					"when": "view == csAddonExplorer && viewItem == addon",
-					"group": "inline"
-				},
+          "command": "csAddonExplorer.collapseAddonItems",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "inline"
+        },
         {
           "command": "csAddonExplorer.normalizeLangVars",
           "when": "view == csAddonExplorer && viewItem == addon",
