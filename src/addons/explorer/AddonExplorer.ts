@@ -200,17 +200,17 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this._onDidChangeTreeData.fire();
 	} 
 
-	saveCurrentConfiguration(): void {
+	async saveCurrentConfiguration(): Promise<void> {
 		const addonsConfiguration: AddonsConfiguration = {
 			selectedAddons: this._selectedAddons,
 			expandedElements: this.expanded
 		};
-		this.saveConfiguration(vscode.Uri.file(this.addonReader.workspaceRoot), addonsConfiguration);
+		await this.saveConfiguration(vscode.Uri.file(this.addonReader.workspaceRoot), addonsConfiguration);
 	}
 
-	saveConfiguration(workspaceFolderUri: vscode.Uri, addonCofiguration: AddonsConfiguration): void {
+	async saveConfiguration(workspaceFolderUri: vscode.Uri, addonCofiguration: AddonsConfiguration): Promise<void> {
 		const addonCofigurationString = JSON.stringify(addonCofiguration);
-		this._writeFile(
+		await this._writeFile(
 			vscode.Uri.file(path.join(workspaceFolderUri.fsPath, CONFIGURATION_FILE)), 
 			Buffer.from(addonCofigurationString, 'utf-8'),
 			{
@@ -890,15 +890,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				const rPath = t?.uri?.path;
 
 				if (rPath) {
-					this.expanded = this.expanded.filter(e => e !== rPath);
+					this.expanded = this.expanded.filter(
+						e => !e.includes(rPath)
+					);
 					hasChanges = true;
 				}
 			}
 		});
 		
 		if (hasChanges) {
-			this.saveCurrentConfiguration();
-			this.refresh();
+			await this.saveCurrentConfiguration();
 		}
 	}
 
@@ -913,13 +914,23 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public async closeAddon(resource: Addon) {
-		this._closeAddon(resource);
-		this.refresh();
-		this.saveCurrentConfiguration();
+		await this._closeAddon(resource);
+		await this.saveCurrentConfiguration();
+
+		this.refreshAddonItems(resource.addon);
+	}
+
+	public refreshAddonItems(addon: string) {
+		return this._onDidChangeTreeData.fire(...this.getAddonItems(addon));
+	}
+
+	public getAddonItems(addon: string) {
+		return this.tree.filter(ti => {ti?.addon === addon;})
 	}
 
 	public async _closeAddon(resource: Addon) {
 		this._selectedAddons = this._selectedAddons.filter(a => a !== resource.addon);
+		await this.collapseAddonFiles(resource);
 	}
 
 	private initAddonTranslateFile(resource: Addon) : AddonTranslator {

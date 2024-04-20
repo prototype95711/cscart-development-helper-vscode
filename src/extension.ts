@@ -143,10 +143,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.collapseAddonItems', 
-			(resource: Addon) => {
-				addonExplorer.closeAddon(resource);
-				addonExplorer.collapseAddonFiles(resource);
-				addonExplorer.openAddon(resource.addon);
+			async (resource: Addon) => {
+				await addonExplorer.closeAddon(resource);
+				await addonExplorer.collapseAddonFiles(resource).finally(function() {
+					addonExplorer.openAddon(resource.addon);
+					addonExplorer.refreshAddonItems(resource.addon);
+				});
 			}
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(

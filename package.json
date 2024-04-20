@@ -47,7 +47,8 @@
       },
       {
         "command": "csAddonExplorer.collapseAddonItems",
-        "title": "%addon_explorer.collapse_addon%"
+        "title": "%addon_explorer.collapse_addon%",
+        "icon": "$(collapse-all)"
       },
       {
         "command": "csAddonExplorer.normalizeLangVars",
