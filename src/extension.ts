@@ -160,6 +160,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			(resource) => addonExplorer.translateAddon(resource)
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.copyAddonName', 
+			(resource) => addonExplorer.copyAddonName(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.closeAddon', 
 			(resource) => addonExplorer.closeAddon(resource)
 		));

@@ -913,6 +913,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		await addonTranslator.translate();
 	}
 
+	public async copyAddonName(resource: Addon) {
+		if (!resource) {
+			return;
+		}
+
+		const bad = vscode.Uri.parse(path.join(this.addonReader.workspaceRoot, resource.addon));
+
+		await vscode.commands.executeCommand('copyRelativeFilePath', bad);
+	}
+
 	public async closeAddon(resource: Addon) {
 		await this._closeAddon(resource);
 		await this.saveCurrentConfiguration();
@@ -1236,7 +1246,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public async copyRelativeFilePath(resource: AddonEntry | vscode.Uri) {
-
 		if (!resource) {
 			return;
 		}

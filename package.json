@@ -59,6 +59,10 @@
         "title": "%addon_explorer.translate%"
       },
       {
+        "command": "csAddonExplorer.copyAddonName",
+        "title": "%addon_explorer.copyAddonName%"
+      },
+      {
         "command": "csAddonExplorer.closeAddon",
         "title": "%addon_explorer.close%"
       },
@@ -195,6 +199,11 @@
           "command": "csAddonExplorer.translateAddon",
           "when": "view == csAddonExplorer && viewItem == addon",
           "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.copyAddonName",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.closeAddon",
