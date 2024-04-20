@@ -185,7 +185,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		
 		this.openAddon(addon);
 
-		this.refresh();
+		this.refreshAddonItems(addon);
 		this.saveCurrentConfiguration();
 	}
 
@@ -925,7 +925,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public getAddonItems(addon: string) {
-		return this.tree.filter(ti => {ti?.addon === addon;})
+		return this.tree.filter(ti => {ti?.addon === addon;});
 	}
 
 	public async _closeAddon(resource: Addon) {
@@ -940,7 +940,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		);
 		const explorer = this;
 		addonTranslator.onDidSaveTranslateFiles(function() {
-			explorer.refresh();
+			explorer.refreshAddonItems(resource.addon);
 		});
 
 		return addonTranslator;
