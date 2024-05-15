@@ -139,7 +139,7 @@ export interface AddonEntry {
 	compactOffset?: number
 }
 
-export async function selectAddon(addon: string, addonExplorer: AddonExplorer) {
+export function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 	addonExplorer.add(addon);
 }
 
@@ -338,7 +338,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				if (!isVirtual) {
 					
 					result.map(r =>  {
-						const currentIndex = this.compactTree.findIndex(e => e.uri.path === r.uri.path);
+						const currentIndex = this.compactTree.findIndex(
+							e => e.uri.path === r.uri.path && e.addon === r.addon
+						);
 
 						if (currentIndex > -1) {
 							this.compactTree[currentIndex] = r;
@@ -347,7 +349,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						}
 						
 						this.compactTree = this.compactTree.filter(
-							e => e.compactOffset !== undefined || !r.uri.path.includes(e.uri.path)
+							e => e.addon !== r.addon || (
+								e.compactOffset !== undefined 
+								|| !r.uri.path.includes(e.uri.path)
+							)
 						);
 					});
 				}
@@ -388,10 +393,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 							this.tree.push(entry);
 
 							if (this.compactTree.findIndex(
-									e => e.uri.path.includes(entry.uri.path) && e.compactOffset !== undefined
+									e => e.uri.path.includes(entry.uri.path) 
+										&& e.compactOffset !== undefined
+										&& e.addon === entry.addon
 								) === -1
 							) {
-								const currentIndex = this.compactTree.findIndex(e => e.uri.path === entry.uri.path);
+								const currentIndex = this.compactTree.findIndex(
+									e => e.uri.path === entry.uri.path && e.addon === entry.addon
+								);
 
 								if (currentIndex > -1) {
 									this.compactTree[currentIndex] = entry;
@@ -421,10 +430,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 							this.tree.push(entry);
 
 							if (this.compactTree.findIndex(
-									e => e.uri.path.includes(entry.uri.path) && e.compactOffset !== undefined
+									e => e.uri.path.includes(entry.uri.path) 
+										&& e.compactOffset !== undefined
+										&& e.addon === entry.addon
 								) === -1
 							) {
-								const currentIndex = this.compactTree.findIndex(e => e.uri.path === entry.uri.path);
+								const currentIndex = this.compactTree.findIndex(
+									e => e.uri.path === entry.uri.path && e.addon === entry.addon
+								);
 
 								if (currentIndex > -1) {
 									this.compactTree[currentIndex] = entry;
@@ -757,6 +770,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async getNearVisibleTreeElement(
+		addon: string,
 		targetPath: string, 
 		tree: Array<Addon | AddonEntry> = []
 	): Promise<AddonEntry | Addon | undefined> {
@@ -771,10 +785,18 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			e => tree.push(e)
 		);
 
+		if (!this._selectedAddons.includes(addon)) {
+			return;
+		}
+
 		const targetDir = path.dirname(targetPath);
 		const applicants: Array<Addon | AddonEntry> = [];
 
 		tree.forEach(el => {
+
+			if (el.addon !== addon) {
+				return;
+			}
 
 			const isAddon = el instanceof Addon;
 
@@ -1231,6 +1253,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	public async closeAddon(resource: Addon) {
 		await this._closeAddon(resource);
 		await this.saveCurrentConfiguration();
+
+		this.compactTree = this.compactTree.filter(i => i.addon !== resource.addon);
 
 		this.refreshAddonItems(resource.addon);
 	}

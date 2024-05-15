@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { window } from 'vscode';
 
 import { AddonReader } from '../AddonReader';
-import { AddonExplorer } from '../explorer/AddonExplorer';
+import { AddonEntry, AddonExplorer } from '../explorer/AddonExplorer';
+import { Addon } from '../../treeview/AddonTreeItem';
 
 /**
  * Shows a addon list
@@ -10,7 +11,12 @@ import { AddonExplorer } from '../explorer/AddonExplorer';
 export async function showAddonPicker(
 	addonReader: AddonReader, 
 	addonExplorer: AddonExplorer,
-	onDidChangeSelectionCallback: (selectedAddon: string, addonExplorer: AddonExplorer) => Promise<void>
+	view: vscode.TreeView<Addon | AddonEntry>,
+	onDidChangeSelectionCallback: (
+		selectedAddon: string,
+		addonExplorer: AddonExplorer, 
+		view: vscode.TreeView<Addon | AddonEntry>
+	) => Promise<void>
 ) {
 	const addonPicker = new AddonPicker(addonReader);
 
@@ -18,7 +24,7 @@ export async function showAddonPicker(
 	addonPick.items = addonPicker.getAddonPickerList();
 	addonPick.onDidChangeSelection(selection => {
 		if (selection[0]) {
-			onDidChangeSelectionCallback(selection[0].label, addonExplorer);
+			onDidChangeSelectionCallback(selection[0].label, addonExplorer, view);
 		}
 		addonPick.hide();
 	});

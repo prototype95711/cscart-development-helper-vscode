@@ -19,7 +19,7 @@
   "contributes": {
     "keybindings": [
       {
-        "command": "csAddonExplorer.focus",
+        "command": "workbench.view.extension.cs-addon-explorer",
         "key": "ctrl+shift+a",
         "mac": "cmd+shift+a"
       }

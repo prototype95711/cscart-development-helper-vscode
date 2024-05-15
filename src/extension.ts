@@ -37,7 +37,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.commands.registerCommand('csAddonExplorer.openAddon', () => showAddonPicker(
 				addonReader, 
 				addonExplorer, 
-				selectAddon
+				view,
+				openAddon
 			))
 		);
 		context.subscriptions.push(
@@ -153,6 +154,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				await addonExplorer.collapseAddonFiles(resource).finally(function() {
 					addonExplorer.openAddon(resource.addon);
 					addonExplorer.refreshAddonItems(resource.addon);
+					addonExplorer.saveCurrentConfiguration();
 				});
 			}
 		));
@@ -289,6 +291,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	} else {
 		vscode.commands.executeCommand('setContext', 'isCsCartWorkspaces', false);
 		vscode.window.showInformationMessage(vscode.l10n.t("No CS-Cart addons in workspace"));
+
 		return;
 	}
 }
@@ -299,6 +302,14 @@ export function deactivate() {
 		disposables.forEach(item => item.dispose());
 	}
 	disposables = [];
+}
+
+async function openAddon(addon: string, addonExplorer: AddonExplorer, view: vscode.TreeView<Addon | AddonEntry>) {
+	selectAddon(addon, addonExplorer);
+
+	setTimeout(() => {
+		selectOpenedAddonFileInExplorer(addonExplorer, view);
+	}, 100);
 }
 
 function refreshOverridesPanelData(overridesList: OverridesProvider) {
@@ -344,12 +355,9 @@ async function selectAddonFileInExplorer(
 	explorerView: vscode.TreeView<Addon | AddonEntry>,
 	parentPath: string = ''
 ) {
-	const nearEl = await explorer.getNearVisibleTreeElement(filePath);
+	const nearEl = await explorer.getNearVisibleTreeElement(addon, filePath);
 
-	if (
-		nearEl !== undefined 
-		&& nearEl.addon === addon
-	) {
+	if (nearEl !== undefined ) {
 		const nearElPath = nearEl instanceof Addon ? nearEl.addon : nearEl.uri.path;
 
 		if (nearElPath === parentPath) {
@@ -391,18 +399,17 @@ async function getDataFromConfigurationFiles(context: vscode.ExtensionContext): 
 
 	try {
 		await Promise.all(vscode.workspace.workspaceFolders.map(
-				async (folder) => {
-					var conf = await getDataFromConfigurationFile(
-						folder, 
-						context
-					);
+			async (folder) => {
+				var conf = await getDataFromConfigurationFile(
+					folder, 
+					context
+				);
 
-					if (conf !== null) {
-						config.push(conf);
-					}
+				if (conf !== null) {
+					config.push(conf);
 				}
-			)
-		);
+			}
+		));
 	} catch (ex) {
 		
 	} finally {
