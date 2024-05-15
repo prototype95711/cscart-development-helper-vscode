@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { AddonReader } from './addons/AddonReader';
 
-import { AddonExplorer, selectAddon } from './addons/explorer/AddonExplorer';
+import { AddonEntry, AddonExplorer, selectAddon } from './addons/explorer/AddonExplorer';
 import { showAddonPicker } from './addons/picker/AddonPicker';
 import { AddonFileDecorationProvider } from './addons/explorer/Decorator';
 
@@ -14,6 +14,7 @@ import { anyEvent, filterEvent, relativePath } from './utility/events';
 import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './design/overrides/OverridesFinder';
 import { OverridesProvider } from './design/overrides/explorer/OverridesProvider';
 import { Addon } from './treeview/AddonTreeItem';
+import { ADDON_CATALOG } from './addons/files/AddonFiles';
 
 let disposables: vscode.Disposable[] = [];
 
@@ -117,11 +118,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(viewOverrides);
 
 		isOpenedFilesWithOverrides();
+		selectOpenedAddonFileInExplorer(addonExplorer, view);
 
 		context.subscriptions.push(
 			vscode.window.onDidChangeActiveTextEditor(
 				() => {
 					refreshOverridesPanelData(overridesList);
+					selectOpenedAddonFileInExplorer(addonExplorer, view);
 				}
 			)
 		);
@@ -130,6 +133,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.onDidChangeTextEditorViewColumn(
 				() => {
 					refreshOverridesPanelData(overridesList);
+					selectOpenedAddonFileInExplorer(addonExplorer, view);
 				}
 			)
 		);
@@ -138,6 +142,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.workspace.onDidOpenTextDocument(
 				() => {
 					refreshOverridesPanelData(overridesList);
+					selectOpenedAddonFileInExplorer(addonExplorer, view);
 				}
 			)
 		);
@@ -308,6 +313,74 @@ function refreshOverridesPanelData(overridesList: OverridesProvider) {
 				vscode.window.activeTextEditor.document.uri.path
 			)
 		);
+	}
+}
+
+async function selectOpenedAddonFileInExplorer(explorer: AddonExplorer, explorerView: vscode.TreeView<Addon | AddonEntry>) {
+	if (
+		vscode.window.activeTextEditor 
+		&& vscode.window.activeTextEditor.document.uri.scheme === 'file'
+	) {
+		const filePath = vscode.window.activeTextEditor.document.uri.path;
+
+		if (filePath && filePath.includes(ADDON_CATALOG)) {
+			const pathPieces = filePath.split('/');
+			const addonsPathIndex = pathPieces.findIndex(p => p === ADDON_CATALOG);
+			const addonIndex = addonsPathIndex + 1;
+
+			if (addonsPathIndex && pathPieces?.[addonIndex]?.length > 0) {
+				const addon = pathPieces[addonIndex];
+
+				selectAddonFileInExplorer(addon, filePath, explorer, explorerView);
+			}
+		}
+	}
+}
+
+async function selectAddonFileInExplorer(
+	addon: string,
+	filePath: string, 
+	explorer: AddonExplorer, 
+	explorerView: vscode.TreeView<Addon | AddonEntry>,
+	parentPath: string = ''
+) {
+	const nearEl = await explorer.getNearVisibleTreeElement(filePath);
+
+	if (
+		nearEl !== undefined 
+		&& nearEl.addon === addon
+	) {
+		const nearElPath = nearEl instanceof Addon ? nearEl.addon : nearEl.uri.path;
+
+		if (nearElPath === parentPath) {
+			return;
+		} 
+
+		const isTargetEl = !(nearEl instanceof Addon) && nearEl.uri.path === filePath;
+
+		if (isTargetEl) {
+			explorerView.reveal(nearEl, {select: true, focus: true});
+
+		} else if (
+			parentPath.length === 0
+			|| (nearEl instanceof Addon && parentPath === nearEl.addon)
+			|| (
+				!(nearEl instanceof Addon) 
+				&& nearEl.uri.path !== parentPath
+			)
+		) {
+			if (
+				nearEl instanceof Addon 
+				|| nearEl.addon === addon
+			) {
+				explorerView.reveal(nearEl, {expand: true}).then(e => {
+					selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
+				});
+
+			} else {
+				selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
+			}
+		}
 	}
 }
 

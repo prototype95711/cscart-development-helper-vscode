@@ -149,7 +149,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	dropMimeTypes = ['application/vnd.code.tree.csAddonExplorer'];
 	dragMimeTypes = ['text/uri-list'];
 	
+	addonElms: Addon[] = [];
 	tree: AddonEntry[] = [];
+	compactTree: AddonEntry[] = [];
 
 	private pasteShouldMove = false;
 	private focused: AddonEntry[] = [];
@@ -269,6 +271,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					arguments: [element.uri] 
 				};
 				treeItem.contextValue = 'file';
+				
 			} else if (element.type === vscode.FileType.Directory) {
 				const isAddonPath = element.uri.path.includes(element.addon);
 				const isCompact = (element.compactOffset && element.compactOffset > 1);
@@ -294,7 +297,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return this._getParent(element);
 	}
 
-	async getChildren(element?: Addon | AddonEntry): Promise<Addon[] | AddonEntry[]> {
+	async getChildren(element?: Addon | AddonEntry, isVirtual: boolean = false): Promise<Addon[] | AddonEntry[]> {
 
 		if (element) {
 
@@ -320,13 +323,34 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						addon: element.label, 
 						offset: 0
 					};
+					
 					result.push(entry);
-					this.tree.push(entry);
+
+					if (!isVirtual) {
+						this.tree.push(entry);
+					}
 				});
 
 				result = await Promise.all(result.map(
-					async r => await this.compactFolders(r, 1)
+					async r => await this.compactFolders(r, 1, isVirtual)
 				));
+
+				if (!isVirtual) {
+					
+					result.map(r =>  {
+						const currentIndex = this.compactTree.findIndex(e => e.uri.path === r.uri.path);
+
+						if (currentIndex > -1) {
+							this.compactTree[currentIndex] = r;
+						} else {
+							this.compactTree.push(r);
+						}
+						
+						this.compactTree = this.compactTree.filter(
+							e => e.compactOffset !== undefined || !r.uri.path.includes(e.uri.path)
+						);
+					});
+				}
 
 				return result;
 
@@ -359,7 +383,23 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						};
 
 						result.push(entry);
-						this.tree.push(entry);
+
+						if (!isVirtual) {
+							this.tree.push(entry);
+
+							if (this.compactTree.findIndex(
+									e => e.uri.path.includes(entry.uri.path) && e.compactOffset !== undefined
+								) === -1
+							) {
+								const currentIndex = this.compactTree.findIndex(e => e.uri.path === entry.uri.path);
+
+								if (currentIndex > -1) {
+									this.compactTree[currentIndex] = entry;
+								} else {
+									this.compactTree.push(entry);
+								}
+							}
+						}
 					});
 
 					return result;
@@ -374,9 +414,25 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 							addon: element.addon, 
 							offset: offset
 						};
-
+						
 						result.push(entry);
-						this.tree.push(entry);
+
+						if (!isVirtual) {
+							this.tree.push(entry);
+
+							if (this.compactTree.findIndex(
+									e => e.uri.path.includes(entry.uri.path) && e.compactOffset !== undefined
+								) === -1
+							) {
+								const currentIndex = this.compactTree.findIndex(e => e.uri.path === entry.uri.path);
+
+								if (currentIndex > -1) {
+									this.compactTree[currentIndex] = entry;
+								} else {
+									this.compactTree.push(entry);
+								}
+							}
+						}
 					});
 
 					return result;
@@ -384,13 +440,17 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			}
 
 		} else if (this._selectedAddons.length > 0) {
-			return this.getAddons();
+			const addons = this.getAddons();
+			this.addonElms = this.addonElms.filter(a => addons.findIndex(ae => ae.addon === a.addon) === -1);
+			this.addonElms = this.addonElms.concat(addons);
+
+			return addons;
 		}
 
 		return [];
 	}
 
-	async compactFolders(element: AddonEntry, offset: number): Promise<AddonEntry> {
+	async compactFolders(element: AddonEntry, offset: number, isVirtual: boolean = false): Promise<AddonEntry> {
 		
 		var currentElement = { 
 			uri: element.uri, 
@@ -407,9 +467,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return currentElement;
 		}
 
-		var child = await this.getChildren(element);
+		var child = await this.getChildren(element, isVirtual);
 		
-
 		if (
 			!child?.length 
 			|| child.length > 1 
@@ -423,7 +482,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				return currentElement;
 			}
 
-			return this.compactFolders(child[0], offset + 1);
+			return this.compactFolders(child[0], offset + 1, isVirtual);
 		}
 
 		return currentElement;
@@ -679,6 +738,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	_getTreeElement(path: string | undefined): any {
+		
 		if (!path) {
 			return null;
 		}
@@ -692,6 +752,248 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				result = el;
 			}
 		});
+
+		return result;
+	}
+
+	async getNearVisibleTreeElement(
+		targetPath: string, 
+		tree: Array<Addon | AddonEntry> = []
+	): Promise<AddonEntry | Addon | undefined> {
+
+		var result: AddonEntry | Addon | undefined = undefined;
+
+		this.addonElms.map (
+			addon => tree.push(addon)
+		);
+
+		this.compactTree.map(
+			e => tree.push(e)
+		);
+
+		const targetDir = path.dirname(targetPath);
+		const applicants: Array<Addon | AddonEntry> = [];
+
+		tree.forEach(el => {
+
+			const isAddon = el instanceof Addon;
+
+			if (
+				isAddon
+				&& targetPath.includes(ADDON_CATALOG + '/' + el.addon)
+			) {
+				applicants.push(el);
+
+			} else if (!isAddon) {
+				const isParent = targetDir.includes(el.uri.path);
+				const isEqual = el.uri.path === targetPath;
+
+				if (isParent || isEqual) {
+					applicants.push(el);
+				}
+			}
+		});
+
+		if (applicants.length === 0) {
+			return;
+		}
+
+		applicants.forEach(aplct => {
+			const isAddon = aplct instanceof Addon;
+
+			if (isAddon) {
+
+				if (result === undefined) {
+					result = aplct;
+				}
+
+			} else {
+				var parent = this.findParentInApplicants(aplct, applicants);
+
+				if (
+					parent === undefined 
+					|| (
+						parent instanceof Addon 
+						&& !this.expanded.includes(parent.label)
+					)
+					|| (
+						!(parent instanceof Addon) 
+						&& !this.expanded.includes(parent.addon.concat('/', parent.uri.path))
+					)
+				) {
+					return;
+				}
+
+				if (
+					(result === undefined || result instanceof Addon)
+					|| result.uri.path.length < aplct.uri.path.length
+					|| (
+						result !== undefined
+						&& !(result instanceof Addon)
+						&& !result.compactOffset
+						&& aplct.compactOffset 
+						&& aplct.uri.path.length >= result.uri.path.length
+					)
+				) {
+					result = aplct;
+				}
+			}
+		});
+		
+		return result;
+	}
+
+	findParentInApplicants(
+		applicant: AddonEntry,
+		applicants: Array<Addon | AddonEntry>
+	): AddonEntry | Addon | undefined{
+		var eparent: Addon | AddonEntry | undefined = undefined;
+
+		applicants.forEach(a => { 
+			if (a === applicant) {
+				return;
+			}
+
+			if (a instanceof Addon) {
+
+				if (eparent === undefined) {
+					eparent = a;
+				}
+
+				return;
+			}
+			
+			if (
+				applicant.uri.path !== a.uri.path
+				&& applicant.uri.path.includes(a.uri.path)
+				&& (
+					eparent === undefined
+					|| eparent instanceof Addon
+					|| eparent.uri.path.length < a.uri.path.length
+					|| (!eparent.compactOffset && a.compactOffset)
+				)
+			) {
+				eparent = a;
+			}
+		});
+
+		return eparent;
+	}
+
+	async _getTreeElementRecursive(
+		targetPath: string | undefined, 
+		tree: Array<Addon | AddonEntry> = [], 
+		result: Array <AddonEntry | Addon>  = []
+	): Promise<Array <AddonEntry | Addon>> {
+		
+		if (!targetPath || !targetPath.includes(ADDON_CATALOG)) {
+			return result;
+		}
+
+		var isRoot = tree.length <= 0;
+
+		if (isRoot) {
+			this.addonElms.map (
+				addon => tree.push(addon)
+			);
+
+			this.compactTree.map(
+				e => tree.push(e)
+			);
+		}
+
+		const targetDir = path.dirname(targetPath);
+		const startResultLength = result.length;
+		var existInTree = false;
+		
+		tree.forEach(el => {
+
+			if (
+				el instanceof Addon
+				&& targetPath.includes(ADDON_CATALOG + '/' + el.addon)
+			) {
+
+				if (result.findIndex(e => e instanceof Addon && e.addon === el.addon) === -1) {
+					result.push(el);
+				}
+
+			} else if (!(el instanceof Addon)) {
+				const isParent = targetDir.includes(el.uri.path);
+				const isEqual = el.uri.path === targetPath;
+
+				if (isParent || isEqual) {
+
+					if (isRoot) {
+						var existEl = undefined;
+						const existIndex = result.findIndex(e => !(e instanceof Addon) && e.uri.path === el.uri.path);
+	
+						if (existIndex >= 0) {
+							existEl = result[existIndex];
+						}
+	
+						if (
+							existIndex === -1
+							|| (
+								existEl !== undefined
+								&& !(existEl instanceof Addon)
+								 && !existEl.compactOffset
+								&& el.compactOffset 
+								&& existEl.uri.path === el.uri.path
+							)
+						) {
+							result = result.filter(e => !(e instanceof Addon) && e.uri.path !== el.uri.path);
+							result.push(el);
+						}
+					}
+				}
+
+				if (isEqual) {
+
+					if (result.findIndex(e => !(e instanceof Addon) && e.uri.path === el.uri.path) === -1) {
+						result.push(el);
+					}
+
+					existInTree = true;
+				}
+			}
+		});
+
+		const isFinal = startResultLength >= result.length;
+
+		if (!existInTree && result.length > 0 && !isFinal) {
+			var presult: Addon | AddonEntry | undefined = undefined;
+
+			result.forEach(el => {
+
+				if (el instanceof Addon) {
+
+					if (presult === undefined) {
+						presult = el;
+					}
+
+				} else if (
+					presult === undefined 
+					|| presult instanceof Addon
+					|| presult?.uri?.path?.length < el.uri.path.length
+				) {
+					presult = el;
+				}
+			});
+
+			if (presult) {
+				result = await this._getTreeElementsInChildrens(presult, targetPath, result);
+			}
+		}
+
+		return result;
+	}
+
+	async _getTreeElementsInChildrens(element: Addon | AddonEntry, targetPath: string, result: Array <AddonEntry | Addon> = []): Promise<Array <AddonEntry | Addon>> {
+		var childrens = await this.getChildren(element, true);
+
+		if (childrens.length > 0) {
+			result = await this._getTreeElementRecursive(targetPath, childrens, result);
+		}
 
 		return result;
 	}
@@ -897,6 +1199,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				}
 			}
 		});
+
+		//this.tree = this.tree.filter(e => !(e instanceof Addon) && e.addon !== resource.addon);
+		//this.compactTree = this.compactTree.filter(e => e.addon !== resource.addon);
 		
 		if (hasChanges) {
 			await this.saveCurrentConfiguration();
