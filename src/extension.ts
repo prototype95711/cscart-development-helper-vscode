@@ -16,6 +16,7 @@ import { OverridesProvider } from './design/overrides/explorer/OverridesProvider
 import { Addon } from './treeview/AddonTreeItem';
 import { ADDON_CATALOG } from './addons/files/AddonFiles';
 
+let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -75,6 +76,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 		view.onDidCollapseElement(collapsed => {
 			addonExplorer.collapseItems(collapsed);
+		});
+		view.onDidChangeVisibility(e => {
+			isExplorerActive = e.visible;
 		});
 		context.subscriptions.push(view);
 
@@ -329,7 +333,8 @@ function refreshOverridesPanelData(overridesList: OverridesProvider) {
 
 async function selectOpenedAddonFileInExplorer(explorer: AddonExplorer, explorerView: vscode.TreeView<Addon | AddonEntry>) {
 	if (
-		vscode.window.activeTextEditor 
+		isExplorerActive
+		&& vscode.window.activeTextEditor 
 		&& vscode.window.activeTextEditor.document.uri.scheme === 'file'
 	) {
 		const filePath = vscode.window.activeTextEditor.document.uri.path;
