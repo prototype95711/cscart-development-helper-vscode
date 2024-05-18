@@ -152,6 +152,15 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 			)
 		);
+
+		context.subscriptions.push(
+			vscode.workspace.onDidOpenNotebookDocument(
+				() => {
+					selectOpenedAddonFileInExplorer(addonExplorer, view);
+				}
+			)
+		);
+
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.collapseAddonItems', 
 			async (resource: Addon) => {
