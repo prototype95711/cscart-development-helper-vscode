@@ -14,8 +14,9 @@ import { anyEvent, filterEvent, relativePath } from './utility/events';
 import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './design/overrides/OverridesFinder';
 import { OverridesProvider } from './design/overrides/explorer/OverridesProvider';
 import { Addon } from './treeview/AddonTreeItem';
-import { ADDON_CATALOG } from './addons/files/AddonFiles';
+import { ADDON_CATALOG, getAddonFromPath } from './addons/files/AddonFiles';
 
+let refreshNumber = 0;
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
 
@@ -269,7 +270,22 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const onFileChange = anyEvent(onRepositoryWorkingTreeFileChange);
 		context.subscriptions.push(
-			onFileChange(e => {addonExplorer.refresh();})
+			onFileChange(e => {
+				const addon = getAddonFromPath(e.path);
+
+				if (addon.length > 0) {
+					addonExplorer.refreshAddonItems(addon);
+				} else {
+					addonExplorer.refresh();
+				}
+			})
+		);
+
+		const onFileDelete = anyEvent(repositoryWatcher.onDidDelete);
+		context.subscriptions.push(
+			onFileDelete(e => {
+				addonExplorer.compactTree = addonExplorer.compactTree.filter(i => i.uri.path !== e.path);
+			})
 		);
 
 		context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(e => {
@@ -339,14 +355,10 @@ async function selectOpenedAddonFileInExplorer(explorer: AddonExplorer, explorer
 	) {
 		const filePath = vscode.window.activeTextEditor.document.uri.path;
 
-		if (filePath && filePath.includes(ADDON_CATALOG)) {
-			const pathPieces = filePath.split('/');
-			const addonsPathIndex = pathPieces.findIndex(p => p === ADDON_CATALOG);
-			const addonIndex = addonsPathIndex + 1;
+		if (filePath) {
+			const addon = getAddonFromPath(filePath);
 
-			if (addonsPathIndex && pathPieces?.[addonIndex]?.length > 0) {
-				const addon = pathPieces[addonIndex];
-
+			if (addon.length > 0) {
 				selectAddonFileInExplorer(addon, filePath, explorer, explorerView);
 			}
 		}

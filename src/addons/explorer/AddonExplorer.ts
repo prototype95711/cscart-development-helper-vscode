@@ -14,7 +14,7 @@ import { ResourceFileEdit } from '../../utility/resourceFileEdit';
 import { AddonsConfiguration, CONFIGURATION_FILE } from '../../configuration/addonsConfiguration';
 import { AddonTranslator } from '../translator/AddonTranslator';
 import { AddonPath } from '../files/AddonPath';
-import { ADDON_CATALOG } from '../files/AddonFiles';
+import { ADDON_CATALOG, getAddonFromPath } from '../files/AddonFiles';
 
 const CSCART_ROOT_FOLDER_PLACEHOLDER = '$storeFolder$';
 
@@ -594,6 +594,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async _delete(uri: vscode.Uri, options: { recursive: boolean; }): Promise<boolean | void> {
+		this.compactTree = this.compactTree.filter(i => i.uri.path !== uri.path);
+
 		if (options.recursive) {
 			var action = rimraf.rimraf(uri.path);
 
@@ -604,6 +606,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	delete(uri: vscode.Uri, options: { recursive: boolean; }): Thenable<void> {
+		this.compactTree = this.compactTree.filter(i => i.uri.path !== uri.path);
+
 		if (options.recursive) {
 			return _.rmrf(uri.fsPath);
 		}
@@ -612,10 +616,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean; }): void | Thenable<void> {
+		this.compactTree = this.compactTree.filter(i => i.uri.path !== oldUri.path);
+
 		return this._rename(oldUri, newUri, options);
 	}
 
 	async _rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean; }): Promise<void> {
+		this.compactTree = this.compactTree.filter(i => i.uri.path !== oldUri.path);
+
 		const exists = await _.exists(newUri.fsPath);
 
 		if (exists) {
@@ -674,9 +682,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			);
 			
 			roots.forEach(r => this._reparentNode(r, target));
-			this._onDidChangeTreeData.fire(...parents, target);
+			//this._onDidChangeTreeData.fire(...parents, target);
 
-			this.refresh();
+			//this.refresh();
 		}
 	}
 
@@ -1196,10 +1204,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			if (!exists) {
 				await _.mkdir(target_uri.fsPath);
 			}
+
+			//const addon = getAddonFromPath(target_uri.path);
 			
-			setTimeout(() => {
-				this.refresh();
-			}, 100);
+			/*setTimeout(() => {
+				if (addon) {
+					this.refreshAddonItems(addon);
+				} else {
+					this.refresh();
+				}
+			}, 100);*/
 		}
 	}
 
@@ -1316,9 +1330,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			var canOverwrite = await this.askForOverwrite(target_uri);
 
 			this.writeFile(target_uri, new Uint8Array(), {create: true, overwrite: canOverwrite});
-			
+
 			setTimeout(() => {
-				this.refresh();
 				this.openFile(target_uri);
 			}, 100);
 		}
@@ -1454,9 +1467,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				var canOverwrite = await this.askForOverwrite(target_uri);
 	
 				this.rename(resource.uri, target_uri, {overwrite: canOverwrite});
-				setTimeout(() => {
-					this.refresh();
-				}, 100);
 			}
 		}
 	}
@@ -1821,7 +1831,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				}
 			}
 		} catch (e) {
-			console.log(e);
 			//onError(notificationService, new Error(nls.localize('fileDeleted', "The file(s) to paste have been deleted or moved since you copied them. {0}", getErrorMessage(e))));
 		} finally {
 			this.refresh();

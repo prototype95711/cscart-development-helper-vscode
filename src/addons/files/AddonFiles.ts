@@ -186,3 +186,19 @@ export async function getThemeNames(designPath: string) : Promise<string[]> {
 		)
 	);
 }
+
+export function getAddonFromPath(path: string) {
+	var addon: string = '';
+
+	if (path.includes(ADDON_CATALOG)) {
+		const pathPieces = path.split('/');
+		const addonsPathIndex = pathPieces.findIndex(p => p === ADDON_CATALOG);
+		const addonIndex = addonsPathIndex + 1;
+
+		if (addonsPathIndex && pathPieces?.[addonIndex]?.length > 0) {
+			addon = pathPieces[addonIndex];
+		}
+	}
+
+	return addon;
+}
