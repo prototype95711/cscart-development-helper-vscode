@@ -16,7 +16,6 @@ import { OverridesProvider } from './design/overrides/explorer/OverridesProvider
 import { Addon } from './treeview/AddonTreeItem';
 import { ADDON_CATALOG, getAddonFromPath } from './addons/files/AddonFiles';
 
-let refreshNumber = 0;
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
 

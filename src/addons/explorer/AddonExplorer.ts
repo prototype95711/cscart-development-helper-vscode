@@ -572,8 +572,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return _.readfile(uri.fsPath);
 	}
 
-	writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean; }): void | Thenable<void> {
-		return this._writeFile(uri, content, options);
+	async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean; }): Promise<void> {
+		return await this._writeFile(uri, content, options);
 	}
 
 	async _writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean; }): Promise<void> {
@@ -590,7 +590,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			}
 		}
 
-		return _.writefile(uri.fsPath, content as Buffer);
+		return await _.writefile(uri.fsPath, content as Buffer);
 	}
 
 	async _delete(uri: vscode.Uri, options: { recursive: boolean; }): Promise<boolean | void> {
@@ -1327,13 +1327,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (newFilename !== null && newFilename !== undefined && newFilename && tree) {
 			const target_uri = vscode.Uri.file(path.join(uri.fsPath, newFilename));
 
+			const explorer = this;
 			var canOverwrite = await this.askForOverwrite(target_uri);
 
-			this.writeFile(target_uri, new Uint8Array(), {create: true, overwrite: canOverwrite});
-
-			setTimeout(() => {
-				this.openFile(target_uri);
-			}, 100);
+			await this.writeFile(
+				target_uri, 
+				new Uint8Array(), 
+				{create: true, overwrite: canOverwrite}
+			).finally(function () {
+				explorer.openFile(target_uri);
+			});
 		}
 	}
 
