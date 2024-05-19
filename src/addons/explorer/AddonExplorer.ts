@@ -682,9 +682,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			);
 			
 			roots.forEach(r => this._reparentNode(r, target));
-			//this._onDidChangeTreeData.fire(...parents, target);
-
-			//this.refresh();
 		}
 	}
 

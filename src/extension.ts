@@ -79,6 +79,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 		view.onDidChangeVisibility(e => {
 			isExplorerActive = e.visible;
+
+			if (isExplorerActive) {
+				selectOpenedAddonFileInExplorer(addonExplorer, view);
+			}
 		});
 		context.subscriptions.push(view);
 
@@ -123,7 +127,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(viewOverrides);
 
 		isOpenedFilesWithOverrides();
-		selectOpenedAddonFileInExplorer(addonExplorer, view);
 
 		context.subscriptions.push(
 			vscode.window.onDidChangeActiveTextEditor(
