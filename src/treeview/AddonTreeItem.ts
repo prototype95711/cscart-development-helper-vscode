@@ -5,14 +5,28 @@ import { AddonReader } from '../addons/AddonReader';
 export const UNKNOWN_ADDON_VALUE = 'unknown_addon';
 export const ADDON_CONTEXT_VALUE = 'addon';
 
+const addonRep: Addon[] = [];
+
 export function getAddonItem(
     addon: string, 
     addonReader: AddonReader, 
     collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
 ): Addon {
     const addonData = addonReader.getAddonData(addon);
+	const existKey = addonRep.findIndex(ai => ai.addon === addon);
 
-    return new Addon(addon, addonData, collapsibleState);
+	if (existKey > -1) {
+		addonRep[existKey].data = addonData;
+		addonRep[existKey].collapsibleState = collapsibleState;
+	}
+
+	const addonItem = existKey > -1 ? addonRep[existKey] : new Addon(addon, addonData, collapsibleState);
+
+	if (existKey < 0) {
+		addonRep.push(addonItem);
+	}
+
+    return addonItem;
 }
 
 export class Addon extends vscode.TreeItem {
@@ -22,8 +36,8 @@ export class Addon extends vscode.TreeItem {
 
 	constructor(
 		public label: string,
-		public readonly data: any,
-		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+		public data: any,
+		public collapsibleState: vscode.TreeItemCollapsibleState,
 		public readonly command?: vscode.Command
 	) {
 		super(label, collapsibleState);

@@ -74,8 +74,7 @@ export class AddonReader {
 		}
 		
 		const pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(
-			_path => _path 
-			&& pathExists(_path.path)
+			_path => _path && pathExists(_path.path)
 		);
 
 		const addonPathes = pathes.map(_path => { 

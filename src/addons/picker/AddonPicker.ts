@@ -40,7 +40,7 @@ class AddonPicker {
 	getAddonPickerList(): vscode.QuickPickItem[] {
 		const addonNames = this.addonReader.getAddons();
 
-		const getAddonItems = (addonNames:string[]) => addonNames
+		const getAddonItems = (addonNames: string[]) => addonNames
 			? addonNames.map(label => ({ label }))
 			: [];
 

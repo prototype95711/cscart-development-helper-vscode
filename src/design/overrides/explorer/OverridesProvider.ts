@@ -425,6 +425,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 				title: vscode.l10n.t("Open File"), 
 				arguments: [element.uri]
 			};
+
 			treeItem.contextValue = 'file';
 		}
 		return treeItem;

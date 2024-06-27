@@ -169,7 +169,6 @@ export async function activate(context: vscode.ExtensionContext) {
 				await addonExplorer.closeAddon(resource);
 				await addonExplorer.collapseAddonFiles(resource).finally(function() {
 					addonExplorer.openAddon(resource.addon);
-					addonExplorer.refreshAddonItems(resource.addon);
 					addonExplorer.saveCurrentConfiguration();
 				});
 			}
@@ -383,7 +382,7 @@ async function selectAddonFileInExplorer(
 	explorerView: vscode.TreeView<Addon | AddonEntry>,
 	parentPath: string = ''
 ) {
-	const nearEl = await explorer.getNearVisibleTreeElement(addon, filePath);
+	const nearEl = await explorer.getNearVisibleTreeElement(addon, filePath, [], false);
 
 	if (nearEl !== undefined ) {
 		const nearElPath = nearEl instanceof Addon ? nearEl.addon : nearEl.uri.path;
@@ -395,7 +394,12 @@ async function selectAddonFileInExplorer(
 		const isTargetEl = !(nearEl instanceof Addon) && nearEl.uri.path === filePath;
 
 		if (isTargetEl) {
-			explorerView.reveal(nearEl, {select: true, focus: true});
+
+			try {
+				await explorerView.reveal(nearEl, {select: true, focus: true});
+			} catch (e) {
+				
+			}
 
 		} else if (
 			parentPath.length === 0
@@ -409,9 +413,13 @@ async function selectAddonFileInExplorer(
 				nearEl instanceof Addon 
 				|| nearEl.addon === addon
 			) {
-				explorerView.reveal(nearEl, {expand: true}).then(e => {
-					selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
-				});
+				try {
+					await explorerView.reveal(nearEl, {expand: true}).then(e => {
+						selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
+					});
+				} catch (e) {
+					
+				}
 
 			} else {
 				selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);

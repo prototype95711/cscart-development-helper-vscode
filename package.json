@@ -222,52 +222,57 @@
         },
         {
           "command": "csAddonExplorer.revealFileInExplorer",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == compactFolder || viewItem == csFolder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == compactFolder || viewItem == csFolder)",
           "group": "2_view@1"
         },
         {
           "command": "csAddonExplorer.openWith",
-          "when": "view == csAddonExplorer && viewItem == file",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file)",
           "group": "navigation@1"
         },
         {
           "command": "csAddonExplorer.openFileToSide",
-          "when": "view == csAddonExplorer && viewItem == file",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file)",
           "group": "navigation@1"
         },
         {
+          "command": "csAddonExplorer.findOverrides",
+          "when": "view == csAddonExplorer && viewItem == template_file",
+          "group": "2@1"
+        },
+        {
           "command": "csAddonExplorer.revealFileInOS.linux",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder) && isLinux",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder) && isLinux",
           "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.mac",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder) && isMac",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder) && isMac",
           "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.revealFileInOS.windows",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder) && isWindows",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder) && isWindows",
           "group": "2_view@2"
         },
         {
           "command": "csAddonExplorer.copyPath",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder)",
           "group": "2@2"
         },
         {
           "command": "csAddonExplorer.copyRelativeFilePath",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder || viewItem == compactFolder || viewItem == csFolder)",
           "group": "2@2"
         },
         {
           "command": "csAddonExplorer.cut",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder)",
           "group": "1_modification@3"
         },
         {
           "command": "csAddonExplorer.copy",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder)",
           "group": "1_modification@3"
         },
         {
@@ -282,12 +287,12 @@
         },
         {
           "command": "csAddonExplorer.rename",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder)",
           "group": "7_modification"
         },
         {
           "command": "csAddonExplorer.delete",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == folder)",
           "group": "8_modification"
         }
       ]
