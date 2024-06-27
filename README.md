@@ -6,15 +6,15 @@ Working with addons in a separate section, automatic search and translation of l
 
 This extension adds a new container for working with addons. It allows:
 
-- Work with files of selected addons separately from the project.
-- Normalization of translation files and search a lost langvars (for addon with scheme version 3.0 and 4.0).
-- Automatic translation of Langvar into selected languages (for addon with scheme version 3.0 and 4.0).
+- Work with files of the selected addons separately from the project.
+- Normalization of translation files and search for a lost langvars (for addon with scheme version 3.0 and 4.0).
+- Automatic translation of langvar into selected languages (for addon with scheme version 3.0 and 4.0).
 
 Following example shows addon explorer:
 
 ![Addon Explorer](./images/addon-explorer.png)
 
-Extension allow to find all overrides and original files for CS-Cart Smarty Templates in all themes and sort it by priority
+Extension allows to find all overrides and original files of the CS-Cart Smarty Templates in all themes and sort them by priority
 
 ![Overrides](./images/overrides.png)
 
