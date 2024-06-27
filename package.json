@@ -222,7 +222,7 @@
         },
         {
           "command": "csAddonExplorer.revealFileInExplorer",
-          "when": "view == csAddonExplorer && (viewItem == file || viewItem == template_file || viewItem == compactFolder || viewItem == csFolder)",
+          "when": "view == csAddonExplorer && (viewItem == file || viewItem == folder || viewItem == template_file || viewItem == compactFolder || viewItem == csFolder)",
           "group": "2_view@1"
         },
         {
