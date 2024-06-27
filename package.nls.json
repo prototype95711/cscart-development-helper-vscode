@@ -30,5 +30,6 @@
 	"overrides.title": "Overrides",
 	"overrides.find": "Find Overrides",
 	"overrides.openFile": "Open file",
-	"overrides.refresh": "Find now"
+	"overrides.refresh": "Find now",
+	"colors.added": "Added"
 }
