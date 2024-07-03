@@ -200,5 +200,10 @@ export function getAddonFromPath(path: string) {
 		}
 	}
 
+	if (addon.includes('.')) {
+		const addonPieces = addon.split('.');
+		addon = addonPieces[0];		
+	}
+
 	return addon;
 }

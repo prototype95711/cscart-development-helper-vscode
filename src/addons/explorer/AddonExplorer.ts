@@ -317,7 +317,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
-	public getParent(element: AddonEntry): AddonEntry {
+	public getParent(element: AddonEntry): Addon | AddonEntry | undefined {
 		return this._getParent(element);
 	}
 
@@ -774,7 +774,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		
 		if (roots.length > 0) {
 			// Reload parents of the moving elements
-			const parents = roots.map(r => this.getParent(r));
+			//const parents = roots.map(r => this.getParent(r));
 
 			roots.forEach(
 				r => 
@@ -826,7 +826,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		const localRoots = [];
 		for (let i = 0; i < nodes.length; i++) {
 			const parent = this.getParent(nodes[i]);
-			if (parent) {
+
+			if (parent && !(parent instanceof Addon)) {
 				const isInList = nodes.find(n => n.uri.path === parent.uri.path);
 				if (isInList === undefined) {
 					localRoots.push(nodes[i]);
@@ -838,9 +839,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return localRoots;
 	}
 
-	_getParent(element: AddonEntry | vscode.Uri): AddonEntry {
+	_getParent(element: AddonEntry | vscode.Uri): Addon | AddonEntry | undefined {
 
-		var result: AddonEntry = element instanceof vscode.Uri
+		var result: Addon | AddonEntry | undefined = element instanceof vscode.Uri
 			? this._getTreeElement(element.path)
 			: element;
 
@@ -859,7 +860,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					el.addon === addon
 					&& elementUri.path !== el.uri.path
 					&& elementUri.path.includes(el.uri.path)
-					&& (result === element || result.uri.path.length < el.uri.path.length)
+					&& (
+						result === element || (
+							result
+							&& !(result instanceof Addon) 
+							&& result?.uri.path.length < el.uri.path.length)
+						)
 				) {
 					result = el;
 					isExistParent = true;
@@ -868,13 +874,22 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	
 			if (isExistParent) {
 				const compactIndex = this.compactTree.findIndex(
-					el => el.addon === result.addon
-						&& el.uri.path === result.uri.path
+					el => el.addon === result?.addon
+						&& (!(result instanceof Addon) && el.uri.path === result?.uri?.path)
 				);
 	
 				if (compactIndex > -1) {
 					result = this.compactTree[compactIndex];
 				}
+			}
+		}
+
+		if (!(result instanceof Addon) && elementUri.path === result?.uri.path) {
+
+			if (addon) {
+				result = this.tree.find(el => el.addon === addon);
+			} else {
+				return undefined;
 			}
 		}
 
@@ -1911,7 +1926,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					const fileToPasteStat = await _.stat(fileToPaste.path);
 		
 					// Find target
-					var target: AddonEntry;
+					var target: Addon | AddonEntry | undefined;
 
 					const elementObj = element instanceof vscode.Uri ?
 						this._getTreeElement(element.path)
@@ -1924,16 +1939,20 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 							? elementObj
 							: this._getParent(elementUri);
 					}
-		
-					const targetFile = await this.findValidPasteFileTarget(
-						target,
-						{ 
-							resource: fileToPaste, 
-							isDirectory: fileToPasteStat.isDirectory(), 
-							allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
-						},
-						incrementalNaming
-					);
+
+					var targetFile = null;
+					
+					if (target !== undefined && !(target instanceof Addon)) {
+						targetFile = await this.findValidPasteFileTarget(
+							target,
+							{ 
+								resource: fileToPaste, 
+								isDirectory: fileToPasteStat.isDirectory(), 
+								allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
+							},
+							incrementalNaming
+						);
+					}
 		
 					if (!targetFile) {
 						return undefined;
