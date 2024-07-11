@@ -317,7 +317,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
-	public getParent(element: AddonEntry): Addon | AddonEntry | undefined {
+	public getParent(element: Addon | AddonEntry): Addon | AddonEntry | undefined {
 		return this._getParent(element);
 	}
 
@@ -839,7 +839,11 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return localRoots;
 	}
 
-	_getParent(element: AddonEntry | vscode.Uri): Addon | AddonEntry | undefined {
+	_getParent(element: Addon | AddonEntry | vscode.Uri): Addon | AddonEntry | undefined {
+
+		if (element instanceof Addon) {
+			return undefined;
+		}
 
 		var result: Addon | AddonEntry | undefined = element instanceof vscode.Uri
 			? this._getTreeElement(element.path)
@@ -887,10 +891,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (!(result instanceof Addon) && elementUri.path === result?.uri.path) {
 
 			if (addon) {
-				result = this.tree.find(el => el.addon === addon);
+				result = this.addonElms.find(el => el.addon === addon);
 			} else {
 				return undefined;
 			}
+			
+		} else if (result instanceof Addon) {
+			return undefined;
 		}
 
 		return result;
