@@ -11,22 +11,27 @@ export function getAddonItem(
     addon: string, 
     addonReader: AddonReader, 
     collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
-): Addon {
+): Addon | null {
     const addonData = addonReader.getAddonData(addon);
-	const existKey = addonRep.findIndex(ai => ai.addon === addon);
 
-	if (existKey > -1) {
-		addonRep[existKey].data = addonData;
-		addonRep[existKey].collapsibleState = collapsibleState;
+	if (addonData !== null) {
+		const existKey = addonRep.findIndex(ai => ai.addon === addon);
+
+		if (existKey > -1) {
+			addonRep[existKey].data = addonData;
+			addonRep[existKey].collapsibleState = collapsibleState;
+		}
+	
+		const addonItem = existKey > -1 ? addonRep[existKey] : new Addon(addon, addonData, collapsibleState);
+	
+		if (existKey < 0) {
+			addonRep.push(addonItem);
+		}
+
+		return addonItem;
 	}
 
-	const addonItem = existKey > -1 ? addonRep[existKey] : new Addon(addon, addonData, collapsibleState);
-
-	if (existKey < 0) {
-		addonRep.push(addonItem);
-	}
-
-    return addonItem;
+	return null;
 }
 
 export class Addon extends vscode.TreeItem {

@@ -18,6 +18,7 @@ import { ADDON_CATALOG, getAddonFromPath } from './addons/files/AddonFiles';
 
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
+let skipNextAddonFileHightlight: string[] = [];
 
 export async function activate(context: vscode.ExtensionContext) {
 
@@ -122,7 +123,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'overridesProvider.openFile', 
-			(resource) => overridesList.openFile(resource)
+			(resource) => {
+				overridesList.openFile(resource);
+				skipNextAddonFileHightlight.push(resource.path);
+			}
 		));
 		context.subscriptions.push(viewOverrides);
 
@@ -199,7 +203,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.openFile', 
-			(resource) => addonExplorer.openFile(resource)
+			(resource) => {
+				addonExplorer.openFile(resource);
+				skipNextAddonFileHightlight.push(resource.path);
+			}
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.openFileToSide', 
@@ -291,6 +298,19 @@ export async function activate(context: vscode.ExtensionContext) {
 			})
 		);
 
+		addonExplorer.onDidRenameFile(e => {
+			const oldResource = e.shift();
+			const newResourde = e.shift();
+
+			if (
+				oldResource !== undefined 
+				&& newResourde !== undefined
+			) {
+				closeTab(oldResource.uri);
+				addonExplorer.openFile(newResourde.uri);
+			}
+		});
+
 		const onFileDelete = anyEvent(repositoryWatcher.onDidDelete);
 		context.subscriptions.push(
 			onFileDelete(e => {
@@ -366,6 +386,15 @@ async function selectOpenedAddonFileInExplorer(explorer: AddonExplorer, explorer
 		const filePath = vscode.window.activeTextEditor.document.uri.path;
 
 		if (filePath) {
+
+			if (skipNextAddonFileHightlight.includes(filePath)) {
+				skipNextAddonFileHightlight = skipNextAddonFileHightlight.filter(
+					snai => snai !== filePath
+				);
+				
+				return;
+			}
+
 			const addon = getAddonFromPath(filePath);
 
 			if (addon.length > 0) {
@@ -468,4 +497,28 @@ async function getDataFromConfigurationFile(
 	}
 
 	return null;
+}
+
+function closeTab(fileUri: vscode.Uri) {
+	var targetTab: vscode.Tab | null = null;
+
+	vscode.window.tabGroups.all.forEach(tabGroup => {
+		tabGroup.tabs.forEach(
+			t => {
+				const input = t.input;
+				
+				if (
+					input instanceof vscode.TabInputText
+					&& input.uri instanceof vscode.Uri
+					&& input.uri.path === fileUri.path
+				) {
+					targetTab = t;
+				}
+			}
+		);
+	});
+
+	if (targetTab !== null) {
+		vscode.window.tabGroups.close(targetTab);
+	}
 }

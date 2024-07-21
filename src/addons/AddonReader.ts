@@ -7,7 +7,7 @@ import { AddonPath, pathExists } from './files/AddonPath';
 const { parseString } = require('xml2js');
 
 const ADDON_XML_FILENAME = 'addon.xml';
-const ADDON_XML_INVALID_ERROR = 'addon.xml document is invalid???';
+const ADDON_XML_INVALID_ERROR = "{addon}: addon.xml document is invalid???";
 
 export class AddonReader {
 
@@ -23,18 +23,25 @@ export class AddonReader {
 
 		const reading = (err: any, result: any) => {
 			if (err || !result) {
-				vscode.window.showErrorMessage(ADDON_XML_INVALID_ERROR);
+				vscode.window.showWarningMessage(ADDON_XML_INVALID_ERROR.replace("{addon}", addon));
 			} else {
 				addonJson = JSON.stringify(result);
 			}
 		};
 
-		parseString(
-			addonXml,
-			reading
-		);
+		if (addonXml.length > 0) {
+			parseString(
+				addonXml,
+				reading
+			);
+	
+			return JSON.parse(addonJson);
 
-		return JSON.parse(addonJson);
+		} else {
+			vscode.window.showWarningMessage(ADDON_XML_INVALID_ERROR.replace("{addon}", addon));
+			
+			return null;
+		}
 	}
 
 	getAddons(): string[] {

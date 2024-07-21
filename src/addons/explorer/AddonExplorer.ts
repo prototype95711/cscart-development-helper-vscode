@@ -148,7 +148,6 @@ export function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
 	private _hasFilesToPaste: ContextKey;
-	private aItemsLib: Array<Addon> = [];
 	private itemsLib: Array<AddonEntry> = [];
 
 	private treeItemsLib: Array<vscode.TreeItem> = [];
@@ -169,6 +168,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	private clipboardService: IClipboardService;
 	private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	private _onDidCutFile: vscode.EventEmitter<AddonEntry[]>;
+	private _onDidRenameFile: vscode.EventEmitter<AddonEntry[]>;
 	private _selectedAddons: string[] = [];
 
 	private _onDidChangeTreeData: vscode.EventEmitter<(Addon | AddonEntry | undefined)[] | AddonEntry | Addon | void> = new vscode.EventEmitter<(Addon | AddonEntry | undefined)[] | void>();
@@ -179,6 +179,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 		this._onDidCutFile = new vscode.EventEmitter<AddonEntry[]>();
+		this._onDidRenameFile = new vscode.EventEmitter<AddonEntry[]>();
 		this.clipboardService = new ClipboardService();
 	}
 
@@ -188,6 +189,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	get onDidCutFile(): vscode.Event<AddonEntry[]> {
 		return this._onDidCutFile.event;
+	}
+
+	get onDidRenameFile(): vscode.Event<AddonEntry[]> {
+		return this._onDidRenameFile.event;
 	}
 
 	add(addon: string): void {
@@ -1318,11 +1323,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					? vscode.TreeItemCollapsibleState.Expanded 
 					: vscode.TreeItemCollapsibleState.Collapsed;
 
-				return getAddonItem(addon, this.addonReader, collapsibleState);
+				const addonItem = getAddonItem(addon, this.addonReader, collapsibleState);
+
+				return addonItem;
 			})
 			: [];
 
-		return addons;
+		return addons.filter(ai => ai !== null);
 	}
 
 	public async newFolder(resource: AddonEntry | vscode.Uri) {
@@ -1447,10 +1454,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public refreshAddonItems(addon: string) {
-		const items = this.getAddonItems(addon);
+		const item = getAddonItem(addon, this.addonReader);
 
-		if (items?.length > 0) {
-			return this._onDidChangeTreeData.fire(items);
+		if (item !== null ) {
+			return this._onDidChangeTreeData.fire(item);
 		}
 
 		return this._onDidChangeTreeData.fire();
@@ -1632,11 +1639,24 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			placeHolder: vscode.l10n.t('Enter the new name'), 
 			value: path.basename(resource.uri.path) 
 		}).then(
-			value => this.askRename(resource, value)
+			async value => await this.askRename(resource, value).then(
+				r => {
+					if (r instanceof vscode.Uri) {
+						var new_resource: AddonEntry = {
+							addon: resource.addon,
+							type: resource.type,
+							offset: resource.offset,
+							uri: r,
+							compactOffset: resource.compactOffset
+						};
+						this._onDidRenameFile.fire([resource, new_resource]);
+					}
+				}
+			)
 		);
 	}
 
-	private async askRename(resource: AddonEntry, value: string | undefined) {
+	private async askRename(resource: AddonEntry, value: string | undefined): Promise<vscode.Uri | null> {
 		const tree = this.tree;
 
 		if (value !== null && value !== undefined && value && tree) {
@@ -1648,9 +1668,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	
 				var canOverwrite = await this.askForOverwrite(target_uri);
 	
-				this.rename(resource.uri, target_uri, {overwrite: canOverwrite});
+				await this.rename(resource.uri, target_uri, {overwrite: canOverwrite});
+
+				return target_uri;
 			}
 		}
+
+		return null;
 	}
 
 	private getCommandTarget(target: AddonEntry| vscode.Uri): AddonEntry[] {

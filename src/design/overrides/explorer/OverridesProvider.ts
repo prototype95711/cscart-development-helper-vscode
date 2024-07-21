@@ -313,7 +313,12 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 							const addon = addonPathPieces.filter(p => p.trim()).pop();
 
 							if (addon && this.list.findIndex(l => l.addon === addon) === -1) {
-								result.push(getAddonItem(addon, this.addonReader));
+								const addonItem = getAddonItem(addon, this.addonReader);
+
+								if (addonItem !== null) {
+									result.push(addonItem);
+								}
+								
 								const entry: CSDesignPath = { 
 									addon: addon,
 									path: coreFile.path,
@@ -374,12 +379,14 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 		};
 
 		var addons: string[] = this.list.filter(onlyUnique).map(item => item.addon);
-		var addonObjects: Addon[] = addons.length > 0
+		var addonObjectsSource: Array<Addon | null> = addons.length > 0
 			? addons.map(addon => getAddonItem(addon, this.addonReader))
 			: [];
 
+		var addonObjects: Addon[] = addonObjectsSource.filter(ao => ao !== null);
+
 		addonObjects = addonObjects.map(a => {
-			if (a.data?.addon?.priority) {
+			if (a !== null && a.data?.addon?.priority) {
 				a.label += ' ' + vscode.l10n.t("priority:") + ' ' + a.data?.addon?.priority;
 			}
 			return a;
