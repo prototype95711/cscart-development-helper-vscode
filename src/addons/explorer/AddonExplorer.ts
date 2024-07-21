@@ -169,6 +169,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	private _onDidCutFile: vscode.EventEmitter<AddonEntry[]>;
 	private _onDidRenameFile: vscode.EventEmitter<AddonEntry[]>;
+
+	private _onDidNewFolder: vscode.EventEmitter<vscode.Uri>;
+
 	private _selectedAddons: string[] = [];
 
 	private _onDidChangeTreeData: vscode.EventEmitter<(Addon | AddonEntry | undefined)[] | AddonEntry | Addon | void> = new vscode.EventEmitter<(Addon | AddonEntry | undefined)[] | void>();
@@ -180,6 +183,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 		this._onDidCutFile = new vscode.EventEmitter<AddonEntry[]>();
 		this._onDidRenameFile = new vscode.EventEmitter<AddonEntry[]>();
+		this._onDidNewFolder = new vscode.EventEmitter<vscode.Uri>();
+
 		this.clipboardService = new ClipboardService();
 	}
 
@@ -193,6 +198,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	get onDidRenameFile(): vscode.Event<AddonEntry[]> {
 		return this._onDidRenameFile.event;
+	}
+
+	get onDidNewFolder(): vscode.Event<vscode.Uri> {
+		return this._onDidNewFolder.event;
 	}
 
 	add(addon: string): void {
@@ -1329,7 +1338,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			})
 			: [];
 
-		return addons.filter(ai => ai !== null);
+		const addonItems: Addon[] = [];
+		addons.map(ai => {if (ai !== null && ai instanceof Addon) {addonItems.push(ai);}});
+
+		return addonItems;
 	}
 
 	public async newFolder(resource: AddonEntry | vscode.Uri) {
@@ -1373,7 +1385,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		if (newFoldername !== null && newFoldername !== undefined && newFoldername && tree) {
 
-			var target_uri;
+			var target_uri: vscode.Uri;
 
 			if (newFoldername.includes(CSCART_ROOT_FOLDER_PLACEHOLDER)) {
 				newFoldername = newFoldername.replace(
@@ -1388,7 +1400,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			const exists = await _.exists(target_uri.fsPath);
 
 			if (!exists) {
-				await _.mkdir(target_uri.fsPath);
+				await _.mkdir(target_uri.fsPath).then(e => {
+					this._onDidNewFolder.fire(target_uri);
+				});
 			}
 
 			//const addon = getAddonFromPath(target_uri.path);

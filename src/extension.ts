@@ -7,6 +7,7 @@ import { showAddonPicker } from './addons/picker/AddonPicker';
 import { AddonFileDecorationProvider } from './addons/explorer/Decorator';
 
 import path from 'path';
+import * as fs from 'fs';
 import * as afs from './utility/afs';
 
 import { AddonsConfiguration, CONFIGURATION_FILE } from './configuration/addonsConfiguration';
@@ -311,6 +312,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
+		addonExplorer.onDidNewFolder(folderPath => {
+			const addon = getAddonFromPath(folderPath.path);
+
+			if (addon.length > 0) {
+				setTimeout(() => {
+					selectAddonFileInExplorer(addon, folderPath.path, addonExplorer, view);
+				}, 100);
+			}
+		});
+
 		const onFileDelete = anyEvent(repositoryWatcher.onDidDelete);
 		context.subscriptions.push(
 			onFileDelete(e => {
@@ -425,9 +436,15 @@ async function selectAddonFileInExplorer(
 		if (isTargetEl) {
 
 			try {
-				await explorerView.reveal(nearEl, {select: true, focus: true});
+				const isFolder = fs.lstatSync(filePath).isDirectory();
+
+				if (isFolder) {
+					await explorerView.reveal(nearEl, {expand: true, focus: true, select: true});
+				} else {
+					await explorerView.reveal(nearEl, {select: true, focus: true});
+				}
 			} catch (e) {
-				
+				console.log(e);
 			}
 
 		} else if (

@@ -383,7 +383,13 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 			? addons.map(addon => getAddonItem(addon, this.addonReader))
 			: [];
 
-		var addonObjects: Addon[] = addonObjectsSource.filter(ao => ao !== null);
+		var addonObjects: Addon[] = [];
+
+		addonObjectsSource.map(ao => {
+			if (ao !== null && ao instanceof Addon) {
+				addonObjects.push(ao);
+			}
+		});
 
 		addonObjects = addonObjects.map(a => {
 			if (a !== null && a.data?.addon?.priority) {
