@@ -9,6 +9,7 @@
 	"addon_explorer.normalize_translates": "Normalize translate files...",
 	"addon_explorer.translate": "Translate...",
 	"addon_explorer.copyAddonName": "Copy Name",
+	"addon_explorer.packAddon": "Pack to Zip",
 	"addon_explorer.close": "Close",
 	"addon_explorer.files.newFile": "New file...",
 	"addon_explorer.files.newFolder": "New folder...",

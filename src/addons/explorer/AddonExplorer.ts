@@ -1710,8 +1710,8 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 			if (_selected.length === 1) {
 				_selected.filter(element => {
-					if (element.uri.path === itemTarget.uri.path 
-						|| isEqualOrParent(element.uri.path, itemTarget.uri.path)
+					if (element?.uri?.path === itemTarget?.uri?.path 
+						|| isEqualOrParent(element?.uri?.path, itemTarget?.uri?.path)
 					) {
 						return false;
 					}
@@ -1935,6 +1935,28 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return distinctParents;
 	}
 
+	async getDirectoryChildrensToPaste(toPaste: vscode.Uri[]): Promise<vscode.Uri[]> {
+		
+		await Promise.all(
+			toPaste.map(async ftp => {
+				if (fs.lstatSync(ftp.path).isDirectory()) {
+					const childrens = await this.readDirectory(ftp);
+
+					if (childrens?.length > 0) {
+						var childrensToPaste = childrens.map(([name, type]) => {
+							const cPath = vscode.Uri.file(path.join(ftp.path, name));
+							return cPath;
+						});
+
+						toPaste = toPaste.concat(await this.getDirectoryChildrensToPaste(childrensToPaste));
+					}
+				}
+			})
+		);
+
+		return toPaste;
+	}
+
 	public coalesce<T>(array: ReadonlyArray<T | undefined | null>): T[] {
 		return <T[]>array.filter(e => !!e);
 	}
@@ -1956,6 +1978,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		const toPaste = await this.getFilesToPaste();
 		const elementUri = element instanceof vscode.Uri ? element : element.uri;
+
+		var filesToPaste = toPaste.map(tp => vscode.Uri.file(tp.path));
+		filesToPaste = await this.getDirectoryChildrensToPaste(filesToPaste);
 
 		try {
 			// Check if target is ancestor of pasted folder

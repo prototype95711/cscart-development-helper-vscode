@@ -16,6 +16,7 @@ import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } f
 import { OverridesProvider } from './design/overrides/explorer/OverridesProvider';
 import { Addon } from './treeview/AddonTreeItem';
 import { ADDON_CATALOG, getAddonFromPath } from './addons/files/AddonFiles';
+import { AddonPacker } from './addons/packer/AddonPacker';
 
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
@@ -35,6 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const addonReader = new AddonReader(rootPath);
 
 		const addonExplorer = new AddonExplorer(addonReader);
+		const addonPacker= new AddonPacker(addonReader);
 		vscode.window.registerTreeDataProvider('csAddonExplorer', addonExplorer);
 		context.subscriptions.push(
 			vscode.commands.registerCommand('csAddonExplorer.openAddon', () => showAddonPicker(
@@ -189,6 +191,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.copyAddonName', 
 			(resource) => addonExplorer.copyAddonName(resource)
+		));
+		context.subscriptions.push(vscode.commands.registerCommand(
+			'csAddonExplorer.packAddon', 
+			(resource) => addonPacker.pack(resource)
 		));
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.closeAddon', 

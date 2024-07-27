@@ -24,6 +24,11 @@ Latest version of Visual Studio Code
 
 ## Release Notes
 
+### 0.0.5
+
+Pack addon to Zip
+Some fixes
+
 ### 0.0.4
 
 Fixes for smoothness while files update

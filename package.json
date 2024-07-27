@@ -63,6 +63,10 @@
         "title": "%addon_explorer.copyAddonName%"
       },
       {
+        "command": "csAddonExplorer.packAddon",
+        "title": "%addon_explorer.packAddon%"
+      },
+      {
         "command": "csAddonExplorer.closeAddon",
         "title": "%addon_explorer.close%"
       },
@@ -206,6 +210,11 @@
           "group": "2_view@2"
         },
         {
+          "command": "csAddonExplorer.packAddon",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "2_view@2"
+        },
+        {
           "command": "csAddonExplorer.closeAddon",
           "when": "view == csAddonExplorer && (viewItem == addon || viewItem == unknown_addon)",
           "group": "8_modification"
@@ -344,6 +353,8 @@
     "@types/readable-stream": "^4.0.11",
     "@types/rimraf": "^4.0.5",
     "@types/vscode": "^1.84.0",
+    "@types/yauzl": "^2.9.1",
+    "@types/yazl": "^2.4.2",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "eslint": "^8.52.0",
@@ -358,7 +369,9 @@
     "rimraf": "^5.0.5",
     "safe-buffer": "^5.2.1",
     "translate-google-fixed-api": "^1.0.1",
-    "xml2js": "0.5.0"
+    "xml2js": "0.5.0",
+    "yauzl": "^2.9.2",
+    "yazl": "^2.4.3"
   },
   "l10n": "./l10n"
 }
