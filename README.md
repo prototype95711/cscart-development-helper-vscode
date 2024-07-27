@@ -9,6 +9,7 @@ This extension adds a new container for working with addons. It allows:
 - Work with files of the selected addons separately from the project.
 - Normalization of translation files and search for a lost langvars (for addon with scheme version 3.0 and 4.0).
 - Automatic translation of langvar into selected languages (for addon with scheme version 3.0 and 4.0).
+- Pack addon to Zip
 
 Following example shows addon explorer:
 
