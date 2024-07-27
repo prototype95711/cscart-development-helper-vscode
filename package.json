@@ -5,7 +5,7 @@
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
-  "version": "0.0.43",
+  "version": "0.0.5",
   "engines": {
     "vscode": "^1.84.0"
   },
