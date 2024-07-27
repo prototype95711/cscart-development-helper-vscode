@@ -12,6 +12,11 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+		"cs-cart",
+    "cscart",
+		"addons"
+	],
   "activationEvents": [
     "onCommand:addonExplorer.openAddon"
   ],
