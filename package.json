@@ -5,7 +5,7 @@
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
-  "version": "0.0.51",
+  "version": "0.0.52",
   "engines": {
     "vscode": "^1.84.0"
   },
@@ -13,10 +13,10 @@
     "Other"
   ],
   "keywords": [
-		"cs-cart",
+    "cs-cart",
     "cscart",
-		"addons"
-	],
+    "addons"
+  ],
   "activationEvents": [
     "onCommand:addonExplorer.openAddon"
   ],
@@ -358,8 +358,6 @@
     "@types/readable-stream": "^4.0.11",
     "@types/rimraf": "^4.0.5",
     "@types/vscode": "^1.84.0",
-    "@types/yauzl": "^2.9.1",
-    "@types/yazl": "^2.4.2",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "eslint": "^8.52.0",
@@ -375,8 +373,7 @@
     "safe-buffer": "^5.2.1",
     "translate-google-fixed-api": "^1.0.1",
     "xml2js": "0.5.0",
-    "yauzl": "^2.9.2",
-    "yazl": "^2.4.3"
+    "yazl": "^2.4.2"
   },
   "l10n": "./l10n"
 }

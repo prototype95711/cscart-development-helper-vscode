@@ -1,6 +1,6 @@
 import { createWriteStream, promises, WriteStream } from 'fs';
-import type { Entry, ZipFile } from 'yauzl';
 
+const yazl = require('yazl');
 export const CorruptZipMessage: string = 'end of central directory record signature not found';
 
 export interface IExtractOptions {
@@ -13,14 +13,6 @@ export interface IExtractOptions {
 	sourcePath?: string;
 }
 
-function modeFromEntry(entry: Entry) {
-	const attr = entry.externalFileAttributes >> 16 || 33188;
-
-	return [448 /* S_IRWXU */, 56 /* S_IRWXG */, 7 /* S_IRWXO */]
-		.map(mask => attr & mask)
-		.reduce((a, b) => a + b, attr & 61440 /* S_IFMT */);
-}
-
 export interface IFile {
 	path: string;
 	contents?: Buffer | string;
@@ -28,10 +20,8 @@ export interface IFile {
 }
 
 export async function zip(zipPath: string, files: IFile[]): Promise<string> {
-	const { ZipFile } = await import('yazl');
-
 	return new Promise<string>((c, e) => {
-		const zip = new ZipFile();
+		const zip = new yazl.ZipFile();
 		files.forEach(f => {
 			if (f.contents) {
 				zip.addBuffer(typeof f.contents === 'string' ? Buffer.from(f.contents, 'utf8') : f.contents, f.path);
