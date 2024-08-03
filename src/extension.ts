@@ -307,14 +307,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		addonExplorer.onDidRenameFile(e => {
 			const oldResource = e.shift();
-			const newResourde = e.shift();
+			const newResource = e.shift();
 
 			if (
-				oldResource !== undefined 
-				&& newResourde !== undefined
+				newResource?.type === vscode.FileType.File
+				&& oldResource !== undefined 
+				&& newResource !== undefined
 			) {
 				closeTab(oldResource.uri);
-				addonExplorer.openFile(newResourde.uri);
+				addonExplorer.openFile(newResource.uri);
 			}
 		});
 

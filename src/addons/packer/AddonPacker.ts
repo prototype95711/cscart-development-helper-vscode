@@ -31,8 +31,19 @@ export class AddonPacker {
             const filesToZip = addonFiles.map(af => {
                 return {
                     path: af.path.replace(this.addonReader.workspaceRoot + '/', ''),
-                    localPath:  af.path
+                    localPath: af.path
                 };
+            });
+
+            filesToZip.sort((a, b) => {
+                if (a.path < b.path) {
+                  return -1;
+                }
+                if (a.path > b.path) {
+                  return 1;
+                }
+
+                return 0;
             });
 
             saveDialog.then(e => {

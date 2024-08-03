@@ -1991,7 +1991,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						elementUri.path !== fileToPaste.path
 						&& isEqualOrParent(elementUri.path, fileToPaste.path)
 					) {
-						throw new Error(vscode.l10n.t("File to paste is an ancestor of the destination folder"));
+						throw new Error(
+							vscode.l10n.t("File to paste is an ancestor of the destination folder")
+						);
 					}
 					const fileToPasteStat = await _.stat(fileToPaste.path);
 		
@@ -2153,6 +2155,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			return;
 		} else if (item.type === vscode.FileType.Directory) {
 			items = await this.getChildren(item);
+			items.push(item);
 		} else {
 			items.push(item);
 		}
@@ -2203,7 +2206,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		const stat = await this._stat(element.uri.path);
 
 		if (stat.type === vscode.FileType.Directory) {
-			await _.mkdir(path.dirname(target.fsPath));
+			await _.mkdir(target.path);
 		} else {
 			var buf = await this.readFile(element.uri);
 			await this.writeFile(target, buf, {create:true, overwrite:true});
