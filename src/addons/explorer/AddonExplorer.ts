@@ -169,6 +169,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 	private _onDidCutFile: vscode.EventEmitter<AddonEntry[]>;
 	private _onDidRenameFile: vscode.EventEmitter<AddonEntry[]>;
+	private _onDidPasteCuttedFile: vscode.EventEmitter<{
+		source: vscode.Uri,
+		target: vscode.Uri, 
+		target_element: AddonEntry | Addon | undefined, 
+		childrens: {source: vscode.Uri, target: vscode.Uri}[]
+	}>;
 
 	private _onDidNewFolder: vscode.EventEmitter<vscode.Uri>;
 
@@ -184,6 +190,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this._onDidCutFile = new vscode.EventEmitter<AddonEntry[]>();
 		this._onDidRenameFile = new vscode.EventEmitter<AddonEntry[]>();
 		this._onDidNewFolder = new vscode.EventEmitter<vscode.Uri>();
+		this._onDidPasteCuttedFile = new vscode.EventEmitter<{
+			source: vscode.Uri,
+			target: vscode.Uri, 
+			target_element: AddonEntry | Addon | undefined, 
+			childrens: {source: vscode.Uri, target: vscode.Uri}[]
+		}>();
 
 		this.clipboardService = new ClipboardService();
 	}
@@ -202,6 +214,15 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 	get onDidNewFolder(): vscode.Event<vscode.Uri> {
 		return this._onDidNewFolder.event;
+	}
+
+	get onDidPasteCuttedFile(): vscode.Event<{
+		source: vscode.Uri,
+		target: vscode.Uri, 
+		target_element: AddonEntry | Addon | undefined, 
+		childrens: {source: vscode.Uri, target: vscode.Uri}[]
+	}> {
+		return this._onDidPasteCuttedFile.event;
 	}
 
 	add(addon: string): void {
@@ -1221,7 +1242,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return result;
 	}
 
-	_reparentNode(node: AddonEntry, target: Addon | AddonEntry | undefined): void {
+	_reparentNode(node: AddonEntry, target: Addon | AddonEntry | undefined, overwrite: boolean = true): void {
 		if (target instanceof Addon) {
 			return;
 		}
@@ -1247,7 +1268,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					}
 				}
 
-				this.rename(node.uri, target_uri, {overwrite: true});
+				this.rename(node.uri, target_uri, {overwrite: overwrite});
 			}
 		}
 	}
@@ -1979,9 +2000,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		const toPaste = await this.getFilesToPaste();
 		const elementUri = element instanceof vscode.Uri ? element : element.uri;
 
-		var filesToPaste = toPaste.map(tp => vscode.Uri.file(tp.path));
-		filesToPaste = await this.getDirectoryChildrensToPaste(filesToPaste);
-
 		try {
 			// Check if target is ancestor of pasted folder
 			
@@ -2013,13 +2031,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					}
 
 					var targetFile = null;
-					
+					const isDirectory = fileToPasteStat.isDirectory();
+
 					if (target !== undefined && !(target instanceof Addon)) {
 						targetFile = await this.findValidPasteFileTarget(
-							target,
+							target.uri,
 							{ 
 								resource: fileToPaste, 
-								isDirectory: fileToPasteStat.isDirectory(), 
+								isDirectory: isDirectory, 
 								allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
 							},
 							incrementalNaming
@@ -2029,15 +2048,71 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					if (!targetFile) {
 						return undefined;
 					}
+
+					var childrens: {source: vscode.Uri, target: vscode.Uri}[] = [];
+
+					if (
+						isDirectory 
+						&& !this.pasteShouldMove
+						&& target !== undefined 
+						&& !(target instanceof Addon)
+					) {
+						var childrensToPaste: vscode.Uri[] = [];
+						
+						const targetFolder = target;
+						childrensToPaste = await this.getDirectoryChildrensToPaste([fileToPaste]);
+						childrensToPaste = childrensToPaste.filter(
+							ctp => ctp.path !== fileToPaste.path
+						);
+						
+						await Promise.all(childrensToPaste.map(async ctp => {
+							var csTarget = undefined;
+							const isDirectory = fileToPasteStat.isDirectory();
+							const fileToPasteDirname = fileToPaste.path.split('/').pop();
+
+							if (fileToPasteDirname !== undefined) {
+								csTarget = await this.findValidPasteFileTarget(
+									vscode.Uri.file(
+										path.join(
+											targetFolder.uri.path, 
+											fileToPasteDirname,
+											path.dirname(ctp.path).replace(fileToPaste.path, '')
+										)
+									),
+									{ 
+										resource: ctp, 
+										isDirectory: isDirectory, 
+										allowOverwrite: this.pasteShouldMove || incrementalNaming === 'disabled' 
+									},
+									incrementalNaming
+								);
+							}
+
+							if (csTarget !== undefined) {
+								childrens.push({
+									source: ctp,
+									target: csTarget
+								});
+							}
+						}));
+					}
 		
-					return { source: fileToPaste, target: targetFile, target_element: target};
+					return { 
+						source: fileToPaste, 
+						target: targetFile, 
+						target_element: target, 
+						childrens: childrens
+					};
 				}
 			)));
 	
 			if (sourceTargetPairs.length >= 1) {
 				// Move/Copy File
 				if (this.pasteShouldMove) {
-					sourceTargetPairs.map(s => this.moveFileByAction(s));
+					await Promise.all(sourceTargetPairs.map(async s => {
+						await this.moveFileByAction(s);
+						this._onDidPasteCuttedFile.fire(s);
+					}));
 					
 					/*const resourceFileEdits = sourceTargetPairs.map(pair => new ResourceFileEdit(
 						pair.source, 
@@ -2055,7 +2130,22 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					};
 					await this.applyBulkEdit(resourceFileEdits, options);*/
 				} else {
-					sourceTargetPairs.map(s => this.duplicateFileByAction(s));
+					await Promise.all(sourceTargetPairs.map(
+						async s => {
+							await this.duplicateFileByAction(s);
+
+							if (s.childrens.length > 0) {
+								s.childrens.map(async cs => {
+									await this.duplicateFileByAction({ 
+										source: cs.source, 
+										target: cs.target, 
+										target_element: undefined,
+										childrens: []
+									});
+								});
+							}
+						}
+					));
 					/*const resourceFileEdits = sourceTargetPairs.map(pair => new ResourceFileEdit(pair.source, pair.target, { copy: true, overwrite: incrementalNaming === 'disabled' }));
 					const undoLevel = configurationService.getValue<IFilesConfiguration>().explorer.confirmUndo;
 					const options = {
@@ -2072,14 +2162,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				//const target_el = this._getTreeElement(pair.target.path);
 
 				//await this.selectItems([target_el]);
-
-				if (sourceTargetPairs.length === 1) {
-					const item = await this.findClosest(pair.target);
-
-					if (item && item.type !== vscode.FileType.Directory) {
-						//await editorService.openEditor({ resource: item.resource, options: { pinned: true, preserveFocus: true } });
-					}
-				}
 			}
 		} catch (e) {
 			//onError(notificationService, new Error(nls.localize('fileDeleted', "The file(s) to paste have been deleted or moved since you copied them. {0}", getErrorMessage(e))));
@@ -2235,13 +2317,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async findValidPasteFileTarget(
-		targetFolder: AddonEntry,
+		targetFolder: vscode.Uri,
 		fileToPaste: { resource: vscode.Uri; isDirectory?: boolean; allowOverwrite: boolean },
 		incrementalNaming: 'simple' | 'smart' | 'disabled'
 	): Promise<vscode.Uri | undefined> {
 	
 		let name = path.basename(fileToPaste.resource.path) || fileToPaste.resource.authority;
-		let candidate = vscode.Uri.joinPath(targetFolder.uri, name);
+		let candidate = vscode.Uri.joinPath(targetFolder, name);
 	
 		// In the disabled case we must ask if it's ok to overwrite the file if it exists
 		if (incrementalNaming === 'disabled') {
@@ -2260,7 +2342,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			if (incrementalNaming !== 'disabled') {
 				name = this.incrementFileName(name, !fileToPaste.isDirectory, incrementalNaming);
 			}
-			candidate = vscode.Uri.joinPath(targetFolder.uri, name);
+			candidate = vscode.Uri.joinPath(targetFolder, name);
 		}
 	
 		return candidate;

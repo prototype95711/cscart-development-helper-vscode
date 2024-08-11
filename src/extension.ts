@@ -319,6 +319,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
+		addonExplorer.onDidPasteCuttedFile(e => {
+			const oldResource = e.source;
+			const newResource = e.target;
+
+			if (fs.lstatSync(oldResource.path).isFile()) {
+				closeTab(oldResource);
+				addonExplorer.openFile(newResource);
+			}
+		});
+
 		addonExplorer.onDidNewFolder(folderPath => {
 			const addon = getAddonFromPath(folderPath.path);
 
