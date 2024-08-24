@@ -255,7 +255,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async saveConfiguration(workspaceFolderUri: vscode.Uri, addonCofiguration: AddonsConfiguration): Promise<void> {
-		const addonCofigurationString = JSON.stringify(addonCofiguration);
+		/*const addonCofigurationString = JSON.stringify(addonCofiguration);
 		await this._writeFile(
 			vscode.Uri.file(path.join(workspaceFolderUri.fsPath, CONFIGURATION_FILE)), 
 			Buffer.from(addonCofigurationString, 'utf-8'),
@@ -263,7 +263,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				create: true,
 				overwrite: true
 			}
-		);
+		);*/
+
+		vscode.workspace.getConfiguration("csDevHelper").update("addonExplorerConf", addonCofiguration, true);
 	}
 
 	async applyConfiguration(configuration: AddonsConfiguration, workspaceFolder: vscode.WorkspaceFolder): Promise<void>
@@ -573,7 +575,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 								if (currentIndex > -1) {
 									this.compactTree[currentIndex] = entry;
-								} else {
+								} else if (!this.compactTree.includes(entry)) {
 									this.compactTree.push(entry);
 								}
 							}
@@ -821,8 +823,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 					}
 				}
 			);
-			
-			roots.forEach(r => this._reparentNode(r, target));
+
+			var canOverwrite = await this.askForOverwrite(target.uri);
+			roots.forEach(r => this._reparentNode(r, target, canOverwrite));
 		}
 	}
 
@@ -1249,7 +1252,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		
 		const element: any = {};
 		element[node.uri.path] = this._getTreeElement(node.uri.path);
-		const elementCopy = { ...element };
 		this._removeNode(node);
 		const targetElement = this._getTreeElement(target?.uri.path);
 		var target_uri = target?.uri;
@@ -2135,14 +2137,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 							await this.duplicateFileByAction(s);
 
 							if (s.childrens.length > 0) {
-								s.childrens.map(async cs => {
+								await Promise.all(s.childrens.map(async cs => {
 									await this.duplicateFileByAction({ 
 										source: cs.source, 
 										target: cs.target, 
 										target_element: undefined,
 										childrens: []
 									});
-								});
+								}));
 							}
 						}
 					));
@@ -2205,7 +2207,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		if (roots.length > 0) {
 			// Reload parents of the moving elements
 			const parents = roots.map(r => this.getParent(r));
-			const latestPartOfTarget = action.target.path.split('/').pop();
 
 			if (action.target && action.target !== undefined && (action.target instanceof vscode.Uri)) {
 				roots.forEach(
@@ -2214,10 +2215,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 						var filename = r.uri.path.split('/').pop();
 
 						if (filename !== undefined) {
-							var target_uri = latestPartOfTarget === filename
-								? vscode.Uri.file(action.target.fsPath)
-								: vscode.Uri.file(path.join(action.target.fsPath, filename));
-
 							const target = action.target_element;
 
 							this._reparentNode(r, target);

@@ -5,7 +5,7 @@
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
-  "version": "0.0.54",
+  "version": "0.0.55",
   "engines": {
     "vscode": "^1.84.0"
   },
@@ -44,6 +44,14 @@
           "icon": "media/addon.svg"
         }
       ]
+    },
+    "configuration": {
+        "properties": {
+            "csDevHelper.addonExplorerConf": {
+                "type": "object",
+                "default": {}
+            }
+        }
     },
     "commands": [
       {

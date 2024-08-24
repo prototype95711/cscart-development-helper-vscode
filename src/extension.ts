@@ -10,7 +10,7 @@ import path from 'path';
 import * as fs from 'fs';
 import * as afs from './utility/afs';
 
-import { AddonsConfiguration, CONFIGURATION_FILE } from './configuration/addonsConfiguration';
+import { addonConfFromObject, AddonsConfiguration, CONFIGURATION_FILE } from './configuration/addonsConfiguration';
 import { anyEvent, filterEvent, relativePath } from './utility/events';
 import { OverridesFinder, filterOverridePathPart, isOpenedFilesWithOverrides } from './design/overrides/OverridesFinder';
 import { OverridesProvider } from './design/overrides/explorer/OverridesProvider';
@@ -505,7 +505,10 @@ async function getDataFromConfigurationFiles(context: vscode.ExtensionContext): 
 				);
 
 				if (conf !== null) {
-					config.push(conf);
+					const addonsConfiguration: AddonsConfiguration = addonConfFromObject(
+						conf
+					);
+					config.push(addonsConfiguration);
 				}
 			}
 		));
@@ -519,15 +522,13 @@ async function getDataFromConfigurationFiles(context: vscode.ExtensionContext): 
 async function getDataFromConfigurationFile(
 	folder: vscode.WorkspaceFolder, 
 	context: vscode.ExtensionContext
-): Promise<AddonsConfiguration | null> {
-	const configurationPath = path.join(folder.uri.fsPath, CONFIGURATION_FILE);
-	const configFileExists = await afs.exists(configurationPath);
+): Promise<object | null> {
 
-	if (configFileExists) {
-		const data = await afs.readFile(configurationPath);
-		const addonConfiguration = <AddonsConfiguration>JSON.parse(data.toString('utf-8'));
+	const configuration = vscode.workspace.getConfiguration("csDevHelper")
+		.get("addonExplorerConf", {});
 
-		return addonConfiguration;
+	if (configuration) {
+		return configuration;
 	}
 
 	return null;
