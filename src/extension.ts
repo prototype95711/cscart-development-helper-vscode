@@ -21,6 +21,7 @@ import { AddonPacker } from './addons/packer/AddonPacker';
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
 let skipNextAddonFileHightlight: string[] = [];
+let lastOpenedFilePath: string = '';
 
 export async function activate(context: vscode.ExtensionContext) {
 
@@ -413,7 +414,9 @@ async function selectOpenedAddonFileInExplorer(explorer: AddonExplorer, explorer
 	) {
 		const filePath = vscode.window.activeTextEditor.document.uri.path;
 
-		if (filePath) {
+		if (filePath && filePath !== lastOpenedFilePath) {
+
+			lastOpenedFilePath = filePath;
 
 			if (skipNextAddonFileHightlight.includes(filePath)) {
 				skipNextAddonFileHightlight = skipNextAddonFileHightlight.filter(
