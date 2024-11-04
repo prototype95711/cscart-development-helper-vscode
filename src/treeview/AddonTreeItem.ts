@@ -10,12 +10,13 @@ const addonRep: Addon[] = [];
 export function getAddonItem(
     addon: string, 
     addonReader: AddonReader, 
-    collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
+    collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
+	findInRep: Boolean = true
 ): Addon | null {
     const addonData = addonReader.getAddonData(addon);
 
 	if (addonData !== null) {
-		const existKey = addonRep.findIndex(ai => ai.addon === addon);
+		const existKey = findInRep ? addonRep.findIndex(ai => ai.addon === addon) : -1;
 
 		if (existKey > -1) {
 			addonRep[existKey].data = addonData;
@@ -24,7 +25,7 @@ export function getAddonItem(
 	
 		const addonItem = existKey > -1 ? addonRep[existKey] : new Addon(addon, addonData, collapsibleState);
 	
-		if (existKey < 0) {
+		if (existKey < 0 && findInRep) {
 			addonRep.push(addonItem);
 		}
 

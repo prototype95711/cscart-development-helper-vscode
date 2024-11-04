@@ -313,7 +313,12 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 							const addon = addonPathPieces.filter(p => p.trim()).pop();
 
 							if (addon && this.list.findIndex(l => l.addon === addon) === -1) {
-								const addonItem = getAddonItem(addon, this.addonReader);
+								const addonItem = getAddonItem(
+									addon, 
+									this.addonReader, 
+									vscode.TreeItemCollapsibleState.Collapsed, 
+									false
+								);
 
 								if (addonItem !== null) {
 									result.push(addonItem);
@@ -380,7 +385,14 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 
 		var addons: string[] = this.list.filter(onlyUnique).map(item => item.addon);
 		var addonObjectsSource: Array<Addon | null> = addons.length > 0
-			? addons.map(addon => getAddonItem(addon, this.addonReader))
+			? addons.map(
+				addon => getAddonItem(
+					addon, 
+					this.addonReader, 
+					vscode.TreeItemCollapsibleState.Collapsed, 
+					false
+				)
+			)
 			: [];
 
 		var addonObjects: Addon[] = [];
