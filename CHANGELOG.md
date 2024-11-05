@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Pack addon to zip
+- Moving design files to repository
 
 ### Fixed
 

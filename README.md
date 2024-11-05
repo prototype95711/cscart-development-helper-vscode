@@ -27,6 +27,7 @@ Latest version of Visual Studio Code
 
 ### 0.0.5
 
+Automoving design files to repository
 Pack addon to Zip
 Some fixes
 
