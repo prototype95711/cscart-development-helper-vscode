@@ -179,7 +179,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	private _onDidChangeTreeData: vscode.EventEmitter<(Addon | AddonEntry | undefined)[] | AddonEntry | Addon | void> = new vscode.EventEmitter<(Addon | AddonEntry | undefined)[] | void>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 
-	constructor(private addonReader: AddonReader) {
+	constructor(public addonReader: AddonReader) {
 		this._hasFilesToPaste = new ContextKey('addonExplorer.hasFilesToPaste');
 
 		this._onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();

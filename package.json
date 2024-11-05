@@ -80,6 +80,10 @@
         "title": "%addon_explorer.packAddon%"
       },
       {
+        "command": "csAddonExplorer.syncDesignFiles",
+        "title": "%addon_explorer.syncDesignFiles%"
+      },
+      {
         "command": "csAddonExplorer.closeAddon",
         "title": "%addon_explorer.close%"
       },
@@ -224,6 +228,11 @@
         },
         {
           "command": "csAddonExplorer.packAddon",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "2_view@2"
+        },
+        {
+          "command": "csAddonExplorer.syncDesignFiles",
           "when": "view == csAddonExplorer && viewItem == addon",
           "group": "2_view@2"
         },

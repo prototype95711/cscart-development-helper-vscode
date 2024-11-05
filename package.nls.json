@@ -10,6 +10,7 @@
 	"addon_explorer.translate": "Translate...",
 	"addon_explorer.copyAddonName": "Copy Name",
 	"addon_explorer.packAddon": "Pack to Zip",
+	"addon_explorer.syncDesignFiles": "Move design files to repository",
 	"addon_explorer.close": "Close",
 	"addon_explorer.files.newFile": "New file...",
 	"addon_explorer.files.newFolder": "New folder...",

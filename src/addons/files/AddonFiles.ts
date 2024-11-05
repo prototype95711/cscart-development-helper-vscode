@@ -64,56 +64,73 @@ export function getAddonXmlPath(addonsPath: string | undefined, addon: string) {
 	return _addonPath;
 }
 
-export async function getAddonDesignPathes(workspaceRoot: string | undefined, addon: string) {
+export async function getAddonDesignPathes(
+	workspaceRoot: string | undefined, 
+	addon: string, 
+	getSets: string[] = ['backend', 'themes', 'repository']
+) {
 
 	if (!workspaceRoot) {
 		return [];
 	}
 
+	var designAddonPathes: AddonPath[] = [];
 	const designPath = path.join(workspaceRoot, DESIGN_CATALOG);
-	const designBackendPathes = DESIGN_PARTS.map(
-		part => 
-			new AddonPath(
-				path.join(designPath, DESIGN_BACKEND_CATALOG, part, ADDON_CATALOG, addon),
-				vscode.FileType.Directory
-			)
-	);
-	
-	const designThemesAddonPathes: AddonPath[] = [];
-	const designThemesPathes = path.join(designPath, DESIGN_THEMES_CATALOG);
-	const themeNames = await getThemeNames(designThemesPathes);
 
-	if (themeNames) {
-		themeNames.forEach(
-			themePath => DESIGN_PARTS.map(
-				part => designThemesAddonPathes.push(
-					new AddonPath(
-						path.join(designThemesPathes, themePath, part, ADDON_CATALOG, addon),
-						vscode.FileType.Directory
-					)
+	if (getSets.includes('backend')) {
+		const designBackendPathes = DESIGN_PARTS.map(
+			part => 
+				new AddonPath(
+					path.join(designPath, DESIGN_BACKEND_CATALOG, part, ADDON_CATALOG, addon),
+					vscode.FileType.Directory
 				)
-			)
-		);	
+		);
+		designAddonPathes = designAddonPathes.concat(designBackendPathes);
 	}
 
-	const repThemesAddonPathes: AddonPath[] = [];
-	const repositoryThemesPathes = path.join(workspaceRoot, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG);
-	const repThemeNames = await getThemeNames(repositoryThemesPathes);
-
-	if (themeNames) {
-		repThemeNames.forEach(
-			themePath => DESIGN_PARTS.map(
-				part => repThemesAddonPathes.push(
-					new AddonPath(
-						path.join(repositoryThemesPathes, themePath, part, ADDON_CATALOG, addon),
-						vscode.FileType.Directory
+	if (getSets.includes('themes')) {
+		const designThemesAddonPathes: AddonPath[] = [];
+		const designThemesPathes = path.join(designPath, DESIGN_THEMES_CATALOG);
+		const themeNames = await getThemeNames(designThemesPathes);
+	
+		if (themeNames) {
+			themeNames.forEach(
+				themePath => DESIGN_PARTS.map(
+					part => designThemesAddonPathes.push(
+						new AddonPath(
+							path.join(designThemesPathes, themePath, part, ADDON_CATALOG, addon),
+							vscode.FileType.Directory
+						)
 					)
 				)
-			)
-		);	
+			);	
+		}
+
+		designAddonPathes = designAddonPathes.concat(designThemesAddonPathes);
+
+		if (getSets.includes('repository')) {
+			const repThemesAddonPathes: AddonPath[] = [];
+			const repositoryThemesPathes = path.join(workspaceRoot, VAR_CATALOG, VAR_THEMES_REPOSITORY_CATALOG);
+			const repThemeNames = await getThemeNames(repositoryThemesPathes);
+		
+			if (themeNames) {
+				repThemeNames.forEach(
+					themePath => DESIGN_PARTS.map(
+						part => repThemesAddonPathes.push(
+							new AddonPath(
+								path.join(repositoryThemesPathes, themePath, part, ADDON_CATALOG, addon),
+								vscode.FileType.Directory
+							)
+						)
+					)
+				);	
+			}
+
+			designAddonPathes = designAddonPathes.concat(repThemesAddonPathes);
+		}
 	}
 	
-	return designBackendPathes.concat(designThemesAddonPathes, repThemesAddonPathes);
+	return designAddonPathes;
 }
 
 export async function getAddonJsPath(workspaceRoot: string | undefined, addon: string) {
