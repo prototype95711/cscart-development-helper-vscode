@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Copy and Cute folders
 - Addon Explorer configuration moved to vscode workspace configuration
+- Fix explorer file tree
 
 ## [0.0.4]
 
