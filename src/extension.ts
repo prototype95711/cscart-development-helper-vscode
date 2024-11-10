@@ -35,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('setContext', 'isCsCartWorkspaces', true);
 
 		// Register addons explorer
-		const addonReader = new AddonReader(rootPath);
+		const addonReader = new AddonReader(rootFolder);
 
 		const addonExplorer = new AddonExplorer(addonReader);
 		const addonDesignSyncronizer = new AddonDesignSyncronizer(addonExplorer);
@@ -54,10 +54,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 
 		try {
-			const conf = await getDataFromConfigurationFiles(context);
+			const conf = await getDataFromConfigurationFile(rootFolder, context);
 
-			if (conf.length > 0) {
-				conf.map(c => addonExplorer.applyConfiguration(c, rootFolder));
+			if (conf !== null) {
+				const aConf = addonConfFromObject(conf);
+				addonExplorer.applyConfiguration(aConf);
 			}
 		} catch (err) {
 			vscode.window.showErrorMessage(vscode.l10n.t("Failed to initialize a CS Development Helper configuration."));
@@ -282,7 +283,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const repositoryWatcher = vscode.workspace.createFileSystemWatcher(
 			new vscode.RelativePattern(
 				vscode.Uri.file(rootPath), 
-				'{**/app/**,**/design/**,**/js/**,**/var/themes_repository/**}'
+				'{**/app/**,**/design/**,**/js/**,**/var/langs/**,**/var/themes_repository/**}'
 			)
 		);
 		context.subscriptions.push(repositoryWatcher);
@@ -350,8 +351,12 @@ export async function activate(context: vscode.ExtensionContext) {
 			try {
 				// initialize new source control for manually added workspace folders
 				e.added.forEach(async wf => {
-					const conf = await getDataFromConfigurationFiles(context);
-					conf.map(c => addonExplorer.applyConfiguration(c, wf));
+					const conf = await getDataFromConfigurationFile(wf, context);
+
+					if (conf !== null) {
+						const aConf = addonConfFromObject(conf);
+						addonExplorer.applyConfiguration(aConf);
+					}
 				});
 			} catch (ex) {
 
@@ -493,40 +498,12 @@ async function selectAddonFileInExplorer(
 	}
 }
 
-async function getDataFromConfigurationFiles(context: vscode.ExtensionContext): Promise<AddonsConfiguration[]> {
-	if (!vscode.workspace.workspaceFolders) { return []; }
-
-	var config: AddonsConfiguration[] = [];
-
-	try {
-		await Promise.all(vscode.workspace.workspaceFolders.map(
-			async (folder) => {
-				var conf = await getDataFromConfigurationFile(
-					folder, 
-					context
-				);
-
-				if (conf !== null) {
-					const addonsConfiguration: AddonsConfiguration = addonConfFromObject(
-						conf
-					);
-					config.push(addonsConfiguration);
-				}
-			}
-		));
-	} catch (ex) {
-		
-	} finally {
-		return config;
-	}
-}
-
 async function getDataFromConfigurationFile(
 	folder: vscode.WorkspaceFolder, 
 	context: vscode.ExtensionContext
 ): Promise<object | null> {
 
-	const configuration = vscode.workspace.getConfiguration("csDevHelper")
+	const configuration = vscode.workspace.getConfiguration("csDevHelper", folder)
 		.get("addonExplorerConf", {});
 
 	if (configuration) {

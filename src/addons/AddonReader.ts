@@ -11,10 +11,13 @@ const ADDON_XML_INVALID_ERROR = "{addon}: addon.xml document is invalid???";
 
 export class AddonReader {
 
+	public workspaceRoot: string;
+
 	private addonsPath: string = '';
 
-    constructor(public workspaceRoot: string) {
-		this.addonsPath = getAddonsPath(workspaceRoot);
+    constructor(public workspaceFoler: vscode.WorkspaceFolder) {
+		this.workspaceRoot = workspaceFoler.uri.path;
+		this.addonsPath = getAddonsPath(this.workspaceRoot);
 	}
 
 	getAddonData(addon: string): any {

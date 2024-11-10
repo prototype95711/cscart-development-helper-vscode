@@ -247,24 +247,16 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			selectedAddons: this._selectedAddons,
 			expandedElements: this.expanded
 		};
-		await this.saveConfiguration(vscode.Uri.file(this.addonReader.workspaceRoot), addonsConfiguration);
+		
+		await this.saveConfiguration(this.addonReader.workspaceFoler, addonsConfiguration);
 	}
 
-	async saveConfiguration(workspaceFolderUri: vscode.Uri, addonCofiguration: AddonsConfiguration): Promise<void> {
-		/*const addonCofigurationString = JSON.stringify(addonCofiguration);
-		await this._writeFile(
-			vscode.Uri.file(path.join(workspaceFolderUri.fsPath, CONFIGURATION_FILE)), 
-			Buffer.from(addonCofigurationString, 'utf-8'),
-			{
-				create: true,
-				overwrite: true
-			}
-		);*/
-
-		vscode.workspace.getConfiguration("csDevHelper").update("addonExplorerConf", addonCofiguration, true);
+	async saveConfiguration(workspaceFolderUri: vscode.ConfigurationScope, addonCofiguration: AddonsConfiguration): Promise<void> {
+		
+		vscode.workspace.getConfiguration("csDevHelper", workspaceFolderUri).update("addonExplorerConf", addonCofiguration);
 	}
 
-	async applyConfiguration(configuration: AddonsConfiguration, workspaceFolder: vscode.WorkspaceFolder): Promise<void>
+	async applyConfiguration(configuration: AddonsConfiguration): Promise<void>
 	{
 		this._selectedAddons = [];
 
