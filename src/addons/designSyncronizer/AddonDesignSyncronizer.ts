@@ -141,15 +141,31 @@ export class AddonDesignSyncronizer {
                     );
 
                     if (childrens?.length > 0) {
-                        var folderDesignFiles = childrens.map(
+                        var sFolders: AddonPath[] = [];
+                        var folderDesignFiles: Array<{folder: string, name: string}> = new Array<{folder: string, name: string}>;
+                        childrens.map(
                             ([name, type]) => {
-                                const filePathObj = {
-                                    folder: apath.path, 
-                                    name: name
-                                };
-                                return filePathObj;
+                                if (type === vscode.FileType.Directory) {
+                                    sFolders.push(new AddonPath(apath.path.concat('/', name), type));
+                                } else {
+                                    const filePathObj = {
+                                        folder: apath.path, 
+                                        name: name
+                                    };
+                                    folderDesignFiles.push(filePathObj);
+                                }
                             }
                         );
+
+                        if (sFolders.length > 0) {
+                            const sFoldersFiles = await this.getDesignFiles(
+                                sFolders
+                            );
+
+                            if (sFoldersFiles.length > 0) {
+                                designFiles = designFiles.concat(sFoldersFiles);
+                            }
+                        }
 
                         designFiles = designFiles.concat(folderDesignFiles);
                     }
