@@ -8,6 +8,8 @@
 	"addon_explorer.collapse_addon": "Collapse addon files",
 	"addon_explorer.normalize_translates": "Normalize translate files...",
 	"addon_explorer.translate": "Translate...",
+	"addon_explorer.addFolder": "Add folder...",
+	"addon_explorer.addTranslateFile": "Add translate file...",
 	"addon_explorer.copyAddonName": "Copy Name",
 	"addon_explorer.packAddon": "Pack to Zip",
 	"addon_explorer.syncDesignFiles": "Move design files to repository",

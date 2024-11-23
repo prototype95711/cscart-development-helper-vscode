@@ -161,7 +161,7 @@ export function getTranslateFilePath(workspaceRoot: string | undefined, addon: s
 	return langFilePath;
 }
 
-export async function getTranslatesPath(workspaceRoot: string | undefined, addon: string) {
+export async function getTranslatesPath(workspaceRoot: string | undefined, addon: string, getNotExist: boolean = false) {
 
 	if (!workspaceRoot) {
 		return [];
@@ -174,9 +174,12 @@ export async function getTranslatesPath(workspaceRoot: string | undefined, addon
 		fs.readdirSync(langsPath, { withFileTypes: true })
 		.filter(dirent => dirent.isDirectory())
 		.map(dirent => dirent.name).filter(
-			lang => pathExists(
-				path.join(langsPath, lang, ADDON_CATALOG, addonLangFile)
-			)
+			lang => getNotExist 
+				? !pathExists(
+					path.join(langsPath, lang, ADDON_CATALOG, addonLangFile)
+				) : pathExists(
+					path.join(langsPath, lang, ADDON_CATALOG, addonLangFile)
+				)
 		);
 
 	const langsAddonFiles: AddonPath[] = [];

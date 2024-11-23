@@ -83,8 +83,8 @@ export class AddonReader {
 			addonTranslatesPath = (await getTranslatesPath(this.workspaceRoot, addon));
 		}
 		
-		const pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(
-			_path => _path && pathExists(_path.path)
+		var pathes = addonPath.concat(addonDesignPathes, addonJsPath, addonTranslatesPath).filter(
+			_path => _path && (options?.getNotExists ? !pathExists(_path.path) : pathExists(_path.path))
 		);
 
 		const addonPathes = pathes.map(_path => { 
@@ -136,5 +136,6 @@ export class AddonReader {
 }
 
 export interface IGetAddonPathesOptions {
-	skipTranslatesPath?: boolean | undefined
+	skipTranslatesPath?: boolean | undefined,
+	getNotExists?: boolean | undefined
 }

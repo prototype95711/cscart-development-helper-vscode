@@ -72,6 +72,14 @@
         "title": "%addon_explorer.translate%"
       },
       {
+        "command": "csAddonExplorer.addFolder",
+        "title": "%addon_explorer.addFolder%"
+      },
+      {
+        "command": "csAddonExplorer.addTranslateFile",
+        "title": "%addon_explorer.addTranslateFile%"
+      },
+      {
         "command": "csAddonExplorer.copyAddonName",
         "title": "%addon_explorer.copyAddonName%"
       },
@@ -218,6 +226,16 @@
         },
         {
           "command": "csAddonExplorer.translateAddon",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.addFolder",
+          "when": "view == csAddonExplorer && viewItem == addon",
+          "group": "navigation@1"
+        },
+        {
+          "command": "csAddonExplorer.addTranslateFile",
           "when": "view == csAddonExplorer && viewItem == addon",
           "group": "navigation@1"
         },

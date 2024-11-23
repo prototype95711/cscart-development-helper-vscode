@@ -18,6 +18,8 @@ import { Addon } from './treeview/AddonTreeItem';
 import { ADDON_CATALOG, getAddonFromPath } from './addons/files/AddonFiles';
 import { AddonPacker } from './addons/packer/AddonPacker';
 import { AddonDesignSyncronizer } from './addons/designSyncronizer/AddonDesignSyncronizer';
+import { showNewAddonFolderPicker } from './addons/newFolder/newFolderPicker';
+import { showNewTranslateFilePicker } from './addons/newTranslateFile/newTranslateFilePicker';
 
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
@@ -51,6 +53,26 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 		context.subscriptions.push(
 			vscode.commands.registerCommand('csAddonExplorer.refresh', () => addonExplorer.refresh())
+		);
+
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csAddonExplorer.addFolder', (resource) => showNewAddonFolderPicker(
+				resource.addon,
+				addonReader, 
+				addonExplorer, 
+				view,
+				addAddonFolder
+			))
+		);
+
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csAddonExplorer.addTranslateFile', (resource) => showNewTranslateFilePicker(
+				resource.addon,
+				addonReader, 
+				addonExplorer, 
+				view,
+				addAddonTranslateFile
+			))
 		);
 
 		try {
@@ -385,6 +407,20 @@ export function deactivate() {
 		disposables.forEach(item => item.dispose());
 	}
 	disposables = [];
+}
+
+async function addAddonFolder(selectedFolder: string, addonExplorer: AddonExplorer, view: vscode.TreeView<Addon | AddonEntry>) {
+	addonExplorer.askNewFolder(
+		vscode.Uri.file(addonExplorer.addonReader.workspaceRoot), 
+		selectedFolder
+	);
+}
+
+async function addAddonTranslateFile(selectedFile: string, addonExplorer: AddonExplorer, view: vscode.TreeView<Addon | AddonEntry>) {
+	addonExplorer.askNewFile(
+		vscode.Uri.file(addonExplorer.addonReader.workspaceRoot), 
+		selectedFile
+	);
 }
 
 async function openAddon(addon: string, addonExplorer: AddonExplorer, view: vscode.TreeView<Addon | AddonEntry>) {
