@@ -25,6 +25,10 @@ Latest version of Visual Studio Code
 
 ## Release Notes
 
+### 0.0.6
+
+Command for fast create addon folders and translate files
+
 ### 0.0.5
 
 Automoving design files to repository
