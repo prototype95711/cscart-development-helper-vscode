@@ -96,12 +96,14 @@ export async function getAddonDesignPathes(
 		if (themeNames) {
 			themeNames.forEach(
 				themePath => DESIGN_PARTS.map(
-					part => designThemesAddonPathes.push(
-						new AddonPath(
+					part => {
+						const ap = new AddonPath(
 							path.join(designThemesPathes, themePath, part, ADDON_CATALOG, addon),
 							vscode.FileType.Directory
-						)
-					)
+						);
+						ap.theme = themePath.split('/').pop();
+						designThemesAddonPathes.push(ap);
+					}
 				)
 			);	
 		}
@@ -116,12 +118,14 @@ export async function getAddonDesignPathes(
 			if (themeNames) {
 				repThemeNames.forEach(
 					themePath => DESIGN_PARTS.map(
-						part => repThemesAddonPathes.push(
-							new AddonPath(
+						part => {
+							const ap = new AddonPath(
 								path.join(repositoryThemesPathes, themePath, part, ADDON_CATALOG, addon),
 								vscode.FileType.Directory
-							)
-						)
+							);
+							ap.theme = themePath.split('/').pop();
+							repThemesAddonPathes.push(ap);
+						}
 					)
 				);	
 			}

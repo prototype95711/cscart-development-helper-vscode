@@ -16,6 +16,8 @@ export class AddonPath {
 
     public compact_label: string = '';
 
+    public theme: string | undefined = '';
+
 	constructor(public path: string, public type: vscode.FileType) {
 	}
 }

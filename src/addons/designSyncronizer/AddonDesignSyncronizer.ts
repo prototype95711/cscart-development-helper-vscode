@@ -9,7 +9,8 @@ import { AddonPath, pathExists } from '../files/AddonPath';
 
 interface DesignPath {
     folder: string,
-    name: string
+    name: string,
+    theme: string|undefined
 }
 
 function handleResult<T>(resolve: (result: T) => void, reject: (error: Error) => void, error: Error | null | undefined, result: T): void {
@@ -83,20 +84,34 @@ export class AddonDesignSyncronizer {
             const designFiles: DesignPath[] = await this.getDesignFiles(addonDesignPathes);
 
             if (designFiles.length > 0) {
+                var installedThemes: Array<string> = designFiles.map(
+                    dp => {
+                        const isInDesign = dp.folder.includes(designThemesPath);
+
+                        return isInDesign && dp.theme !== undefined ? dp.theme : '';
+                    }
+                ).filter(t => t.length > 0);
+
                 designFiles.map(
                     async (filePathObj) => {
-                        const isInVarRep = filePathObj.name.includes(varThemesRepPath);
+                        const isInVarRep = filePathObj.folder.includes(varThemesRepPath);
 
                         if (isInVarRep) {
+
+                            if (filePathObj.theme !== undefined) {
+
+                                if (!installedThemes.includes(filePathObj.theme)) {
+                                    return;
+                                }
+                            }
 
                             const pathInDesign = filePathObj.folder.replace(
                                 varThemesRepPath,
                                 designThemesPath
                             );
                             
-                            if (!designFiles.includes(
-                                    {folder: pathInDesign, name: filePathObj.name}
-                                )
+                            if (
+                                !designFiles.find(p => p.folder === pathInDesign && p.name === filePathObj.name)
                             ) {
                                 const cPath = vscode.Uri.file(
                                     path.join(filePathObj.folder, filePathObj.name)
@@ -142,15 +157,19 @@ export class AddonDesignSyncronizer {
 
                     if (childrens?.length > 0) {
                         var sFolders: AddonPath[] = [];
-                        var folderDesignFiles: Array<{folder: string, name: string}> = new Array<{folder: string, name: string}>;
+                        var folderDesignFiles: Array<{folder: string, name: string, theme: string|undefined}> 
+                            = new Array<{folder: string, name: string, theme: string|undefined}>;
                         childrens.map(
                             ([name, type]) => {
                                 if (type === vscode.FileType.Directory) {
-                                    sFolders.push(new AddonPath(apath.path.concat('/', name), type));
+                                    const ap = new AddonPath(apath.path.concat('/', name), type);
+                                    ap.theme = apath.theme;
+                                    sFolders.push(ap);
                                 } else {
                                     const filePathObj = {
                                         folder: apath.path, 
-                                        name: name
+                                        name: name,
+                                        theme: apath.theme
                                     };
                                     folderDesignFiles.push(filePathObj);
                                 }
