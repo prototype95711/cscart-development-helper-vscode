@@ -28,6 +28,7 @@ Latest version of Visual Studio Code
 ### 0.0.6
 
 Command for fast create addon folders and translate files
+Some fixes
 
 ### 0.0.5
 

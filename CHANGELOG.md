@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - New command for fast create addon folders and translate files
+- Some fixes
 
 ## [0.0.5]
 
