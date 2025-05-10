@@ -65,8 +65,8 @@ export class Addon extends vscode.TreeItem {
 	}
 
 	iconPath = {
-		light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'addon.svg'),
-		dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'addon.svg')
+		light: vscode.Uri.file(path.join(__filename, '..', '..', '..', 'resources', 'light', 'addon.svg')),
+		dark: vscode.Uri.file(path.join(__filename, '..', '..', '..', 'resources', 'dark', 'addon.svg'))
 	};
 	contextValue = UNKNOWN_ADDON_VALUE;
 }

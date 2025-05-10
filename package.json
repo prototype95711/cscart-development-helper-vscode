@@ -7,7 +7,7 @@
   "icon": "icon.png",
   "version": "0.0.61",
   "engines": {
-    "vscode": "^1.84.0"
+    "vscode": "^1.100.0"
   },
   "categories": [
     "Other"
@@ -261,7 +261,7 @@
         },
         {
           "command": "csAddonExplorer.newFile",
-          "when": "view == csAddonExplorer && viewItem == folder",
+          "when": "view == csAddonExplorer && (viewItem == folder || viewItem == compactFolder || viewItem == csFolder)",
           "group": "navigation@1"
         },
         {
@@ -392,7 +392,7 @@
     "@types/node": "18.x",
     "@types/readable-stream": "^4.0.11",
     "@types/rimraf": "^4.0.5",
-    "@types/vscode": "^1.84.0",
+    "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "eslint": "^8.52.0",
@@ -404,7 +404,7 @@
     "encoding": "^0.1.13",
     "mkdirp": "^0.5.1",
     "readable-stream": "^4.5.2",
-    "rimraf": "^5.0.5",
+    "rimraf": "^6.0.1",
     "safe-buffer": "^5.2.1",
     "translate-google-fixed-api": "^1.0.1",
     "xml2js": "0.5.0",

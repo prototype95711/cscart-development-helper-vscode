@@ -14,8 +14,8 @@ export class Core extends vscode.TreeItem {
 	}
 
 	iconPath = {
-		light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'core.svg'),
-		dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'core.svg')
+		light: vscode.Uri.file(path.join(__filename, '..', '..', '..', 'resources', 'light', 'core.svg')),
+		dark: vscode.Uri.file(path.join(__filename, '..', '..', '..', 'resources', 'dark', 'core.svg'))
 	};
 
 	contextValue = 'core';

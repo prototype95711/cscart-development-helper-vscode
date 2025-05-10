@@ -238,6 +238,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this.refresh();
 	}
 
+	getOpenedAddonsList(): string[] {
+		return this._selectedAddons;
+	}
+
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
 	} 
@@ -315,7 +319,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				const isAddonPath = element.uri.path.includes(element.addon);
 				const isCompact = (element.compactOffset && element.compactOffset > 1);
 
-				if (isAddonPath) {
+				if (element.uri.path.endsWith(element.addon)) {
+					 treeItem.contextValue = 'csFolder';
+				} else if (isAddonPath) {
 					treeItem.contextValue = 'folder';
 				} else if (isCompact) {
 					treeItem.contextValue = 'compactFolder';
@@ -667,18 +673,20 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			//const parents = roots.map(r => this.getParent(r));
 
 			roots.forEach(
-				r => 
+				async r => 
 				{
 					var filename = r.uri.path.split('/').pop();
 
 					if (filename !== undefined) {
-						vscode.Uri.file(path.join(target.uri.fsPath, filename));
+						var target_uri = vscode.Uri.file(path.join(target.uri.fsPath, filename)),
+							canOverwrite = await this.askForOverwrite(target_uri);
+
+						if (canOverwrite) {
+							this._reparentNode(r, target, canOverwrite);
+						}
 					}
 				}
 			);
-
-			var canOverwrite = await this.askForOverwrite(target.uri);
-			roots.forEach(r => this._reparentNode(r, target, canOverwrite));
 		}
 	}
 
@@ -1366,13 +1374,15 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			const explorer = this;
 			var canOverwrite = await this.askForOverwrite(target_uri);
 
-			await this.writeFile(
-				target_uri, 
-				new Uint8Array(), 
-				{create: true, overwrite: canOverwrite}
-			).finally(function () {
-				explorer.openFile(target_uri);
-			});
+			if (canOverwrite) {
+				await this.writeFile(
+					target_uri, 
+					new Uint8Array(), 
+					{create: true, overwrite: canOverwrite}
+				).finally(function () {
+					explorer.openFile(target_uri);
+				});
+			}
 		}
 	}
 
@@ -1517,10 +1527,12 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				const target_uri = vscode.Uri.file(path.join(fpath.join('/'), value));
 	
 				var canOverwrite = await this.askForOverwrite(target_uri);
-	
-				await this.rename(resource.uri, target_uri, {overwrite: canOverwrite});
+				
+				if (canOverwrite) {
+					await this.rename(resource.uri, target_uri, {overwrite: canOverwrite});
 
-				return target_uri;
+					return target_uri;
+				}
 			}
 		}
 

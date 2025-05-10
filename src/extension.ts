@@ -48,7 +48,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				addonReader, 
 				addonExplorer, 
 				view,
-				openAddon
+				openAddon,
+				addonExplorer.getOpenedAddonsList()
 			))
 		);
 		context.subscriptions.push(
@@ -146,7 +147,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 					vscode.commands.executeCommand("csOverridesList.focus");
 				} else {
-					vscode.window.showInformationMessage(vscode.l10n.t("No overrides founded"));
+					vscode.window.showInformationMessage(vscode.l10n.t("No overrides found"));
 				}
 			}
 		));

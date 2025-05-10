@@ -16,12 +16,13 @@ export async function showAddonPicker(
 		selectedAddon: string,
 		addonExplorer: AddonExplorer, 
 		view: vscode.TreeView<Addon | AddonEntry>
-	) => Promise<void>
+	) => Promise<void>,
+	excludeList : string[] = []
 ) {
 	const addonPicker = new AddonPicker(addonReader);
 
 	const addonPick = window.createQuickPick();
-	addonPick.items = addonPicker.getAddonPickerList();
+	addonPick.items = addonPicker.getAddonPickerList().filter(addon => {return !excludeList.includes(addon.label);});
 	addonPick.onDidChangeSelection(selection => {
 		if (selection[0]) {
 			onDidChangeSelectionCallback(selection[0].label, addonExplorer, view);
