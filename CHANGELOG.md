@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Adaptation for vscode 1.100.x
 - New command for fast create addon folders and translate files
 - Some fixes
 
