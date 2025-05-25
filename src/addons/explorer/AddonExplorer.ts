@@ -133,7 +133,7 @@ namespace _ {
 	}
 }
 
-export interface AddonEntry {
+export interface AddonEntry extends vscode.TreeItem {
 	addon: string;
 	offset: number;
 	uri: vscode.Uri;
@@ -229,13 +229,15 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this.saveCurrentConfiguration();
 	}
 
-	openAddon(addon: string): void {
+	protected openAddon(addon: string, needRefresh: boolean = true): void {
 
 		if (this._selectedAddons.indexOf(addon) === -1) {
 			this._selectedAddons.push(addon);
 		}
 
-		this.refresh();
+		if (needRefresh) {
+			this.refresh();
+		}
 	}
 
 	getOpenedAddonsList(): string[] {
@@ -246,13 +248,17 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this._onDidChangeTreeData.fire();
 	} 
 
-	async saveCurrentConfiguration(): Promise<void> {
+	async saveCurrentConfiguration(apply:boolean = false): Promise<void> {
 		const addonsConfiguration: AddonsConfiguration = {
 			selectedAddons: this._selectedAddons,
 			expandedElements: this.expanded
 		};
 		
 		await this.saveConfiguration(this.addonReader.workspaceFoler, addonsConfiguration);
+
+		if (apply) {
+			await this.applyConfiguration(addonsConfiguration);
+		}
 	}
 
 	async saveConfiguration(workspaceFolderUri: vscode.ConfigurationScope, addonCofiguration: AddonsConfiguration): Promise<void> {
@@ -266,7 +272,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		if (configuration.selectedAddons?.length > 0) {
 			configuration.selectedAddons.map(
-				addon => this.openAddon(addon)
+				addon => this.openAddon(addon, false)
 			);
 		}
 
@@ -286,55 +292,60 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	getTreeItem(element: Addon | AddonEntry): vscode.TreeItem {
 
 		if (element instanceof Addon) {
+			const collapsibleState = this.expanded.includes(element.addon) 
+				? vscode.TreeItemCollapsibleState.Expanded 
+				: vscode.TreeItemCollapsibleState.Collapsed;
+
+			element.collapsibleState = collapsibleState;
+
 			return element;
 		} else {
 			const pathToFind = element.addon.concat('/', element.uri.path);
-			const collapsibleState = element.type === vscode.FileType.Directory 
+			element.collapsibleState = element.type === vscode.FileType.Directory 
 				? (
 					this.expanded.includes(pathToFind) 
 						? vscode.TreeItemCollapsibleState.Expanded 
 						: vscode.TreeItemCollapsibleState.Collapsed
 				)
 				: vscode.TreeItemCollapsibleState.None;
-
-			const treeItem = new vscode.TreeItem(
-				element.uri, 
-				collapsibleState
-			);
+			element.resourceUri = element.uri;
 			
 			if (element.type === vscode.FileType.File) {
-				treeItem.command = { 
+				element.command = { 
 					command: 'csAddonExplorer.openFile', 
 					title: vscode.l10n.t("Open File"), 
 					arguments: [element.uri] 
 				};
 
 				if (element.uri.path.toLowerCase().endsWith('.tpl')) {
-					treeItem.contextValue = 'template_file';
+					element.contextValue = 'template_file';
 				} else {
-					treeItem.contextValue = 'file';
+					element.contextValue = 'file';
 				}
 
 			} else if (element.type === vscode.FileType.Directory) {
 				const isAddonPath = element.uri.path.includes(element.addon);
 				const isCompact = (element.compactOffset && element.compactOffset > 1);
 
-				if (element.uri.path.endsWith(element.addon)) {
-					 treeItem.contextValue = 'csFolder';
+				if (
+					element.uri.path.endsWith(element.addon) 
+					&& element.uri.path.split("/").filter(f => f === element.addon).length === 1
+				) {
+					element.contextValue = 'csFolder';
 				} else if (isAddonPath) {
-					treeItem.contextValue = 'folder';
+					element.contextValue = 'folder';
 				} else if (isCompact) {
-					treeItem.contextValue = 'compactFolder';
+					element.contextValue = 'compactFolder';
 				} else {
-					treeItem.contextValue = 'csFolder';
+					element.contextValue = 'csFolder';
 				}
 			}
 			
 			if (element.compactOffset) {
-				treeItem.label = element.uri.path.split('/').slice(-element.compactOffset).join('/');
+				element.label = element.uri.path.split('/').slice(-element.compactOffset).join('/');
 			}
 
-			return treeItem;
+			return element;
 		}
 	}
 
@@ -474,7 +485,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	async compactFolders(element: AddonEntry, offset: number, isVirtual: boolean = false): Promise<AddonEntry> {
-		var currentElement = { 
+		var currentElement: AddonEntry = { 
 			uri: element.uri, 
 			type: element.type, 
 			addon: element.addon, 
@@ -658,7 +669,6 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			!target 
 			|| target === undefined 
 			|| target instanceof Addon
-			|| !path.dirname(target.uri.path).includes(target.addon)
 		) {
 			return;
 		}
@@ -828,7 +838,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		);
 
 		if (!this._selectedAddons.includes(addon)) {
-			return;
+			return undefined;
 		}
 
 		const targetDir = path.dirname(targetPath);
@@ -859,7 +869,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		});
 
 		if (applicants.length === 0) {
-			return;
+			return undefined;
 		}
 
 		var isNotEmpty = false;
@@ -1160,11 +1170,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		const elementUri = collapsed.element instanceof Addon 
 			? collapsed.element.label 
 			: collapsed.element.addon.concat('/', collapsed.element.uri.path);
+		this.collapseItemsByUri(elementUri, false);
+		this.saveCurrentConfiguration();
+	}
+
+	collapseItemsByUri(elementUri: string, saveConf: boolean = true) {
 		const index = this.expanded.indexOf(elementUri);
 
 		if (index !== -1) {
 			this.expanded.splice(this.expanded.indexOf(elementUri), 1);
-			this.saveCurrentConfiguration();
+
+			if (saveConf) {
+				this.saveCurrentConfiguration();
+			}
 		}
 	}
 
@@ -1304,17 +1322,19 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		await vscode.commands.executeCommand('copyRelativeFilePath', bad);
 	}
 
-	public async closeAddon(resource: Addon) {
+	public async closeAddon(resource: Addon, refresh: boolean = true) {
 		await this.unselectAddon(resource);
-		await this.saveCurrentConfiguration();
+		await this.saveCurrentConfiguration(true);
 
-		this.refresh();
+		if (refresh) {
+			this.refresh();
+		}
 	}
 
 	public refreshAddonItems(addon: string) {
 		const item = getAddonItem(addon, this.addonReader);
 
-		if (item !== null ) {
+		if (item !== null) {
 			return this._onDidChangeTreeData.fire(item);
 		}
 

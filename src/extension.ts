@@ -6,9 +6,7 @@ import { AddonEntry, AddonExplorer, selectAddon } from './addons/explorer/AddonE
 import { showAddonPicker } from './addons/picker/AddonPicker';
 import { AddonFileDecorationProvider } from './addons/explorer/Decorator';
 
-import path from 'path';
 import * as fs from 'fs';
-import * as afs from './utility/afs';
 
 import { addonConfFromObject, AddonsConfiguration, CONFIGURATION_FILE } from './configuration/addonsConfiguration';
 import { anyEvent, filterEvent, relativePath } from './utility/events';
@@ -200,10 +198,17 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(vscode.commands.registerCommand(
 			'csAddonExplorer.collapseAddonItems', 
 			async (resource: Addon) => {
-				await addonExplorer.closeAddon(resource);
-				await addonExplorer.collapseAddonFiles(resource).finally(function() {
-					addonExplorer.openAddon(resource.addon);
-					addonExplorer.saveCurrentConfiguration();
+				const addonPathes = addonExplorer.tree.filter(ti => ti.addon === resource.addon);
+
+				addonPathes.forEach(async apath => {
+					addonExplorer.collapseItemsByUri(apath.addon.concat('/', apath.uri.path), false);
+				});
+				addonExplorer.collapseItemsByUri(resource.addon, false);
+
+				await addonExplorer.closeAddon(resource, false).finally(function() {
+					setTimeout(() => {
+						openAddon(resource.addon, addonExplorer, view);
+					}, 50);
 				});
 			}
 		));
