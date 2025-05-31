@@ -145,7 +145,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 					vscode.commands.executeCommand("csOverridesList.focus");
 				} else {
-					vscode.window.showInformationMessage(vscode.l10n.t("No overrides found"));
+					vscode.window.showInformationMessage(vscode.l10n.t("No overrides founded"));
 				}
 			}
 		));

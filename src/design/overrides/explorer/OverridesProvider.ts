@@ -512,6 +512,7 @@ export class OverridesProvider implements vscode.TreeDataProvider<Addon | Core |
 	public async updateList(filepath: string, overridesList: CSDesignPath[]) {
 		filepath = this.setPlaceholder(filepath);
 			
+		this.cache = this.cache.filter(c => c.path !== filepath);
 		this.cache.push({path: filepath, list: overridesList});
 		this.selectList(filepath);
 	}
