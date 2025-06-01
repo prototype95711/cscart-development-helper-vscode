@@ -18,6 +18,7 @@ import { AddonPacker } from './addons/packer/AddonPacker';
 import { AddonDesignSyncronizer } from './addons/designSyncronizer/AddonDesignSyncronizer';
 import { showNewAddonFolderPicker } from './addons/newFolder/newFolderPicker';
 import { showNewTranslateFilePicker } from './addons/newTranslateFile/newTranslateFilePicker';
+import { AddonTranslator } from './addons/translator/AddonTranslator';
 
 let isExplorerActive: boolean = false;
 let disposables: vscode.Disposable[] = [];
@@ -422,11 +423,21 @@ async function addAddonFolder(selectedFolder: string, addonExplorer: AddonExplor
 	);
 }
 
-async function addAddonTranslateFile(selectedFile: string, addonExplorer: AddonExplorer, view: vscode.TreeView<Addon | AddonEntry>) {
-	addonExplorer.askNewFile(
+async function addAddonTranslateFile(selectedFile: string, addonExplorer: AddonExplorer, addon: string) {
+	await addonExplorer.askNewFile(
 		vscode.Uri.file(addonExplorer.addonReader.workspaceRoot), 
 		selectedFile
 	);
+	const addonEl = addonExplorer.addonElms.find(a => a.label = addon), addonTranslator = addonEl ? new AddonTranslator(
+		addonExplorer.addonReader,
+		addonEl
+	) : undefined;
+
+	if (addonTranslator) {
+		addonTranslator.onDidSaveTranslateFiles(function() {
+			addonExplorer.refreshAddonItems(addon);
+		});
+	}
 }
 
 async function openAddon(addon: string, addonExplorer: AddonExplorer, view: vscode.TreeView<Addon | AddonEntry>) {
@@ -505,9 +516,9 @@ async function selectAddonFileInExplorer(
 				const isFolder = fs.lstatSync(filePath).isDirectory();
 
 				if (isFolder) {
-					await explorerView.reveal(nearEl, {expand: true, focus: true, select: true});
+					//await explorerView.reveal(nearEl, {expand: true, focus: true, select: true});
 				} else {
-					await explorerView.reveal(nearEl, {select: true, focus: true});
+					//await explorerView.reveal(nearEl, {select: true, focus: true});
 				}
 			} catch (e) {
 				console.log(e);
@@ -526,15 +537,15 @@ async function selectAddonFileInExplorer(
 				|| nearEl.addon === addon
 			) {
 				try {
-					await explorerView.reveal(nearEl, {expand: true}).then(e => {
+					/*await explorerView.reveal(nearEl, {expand: true}).then(e => {
 						selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
-					});
+					});*/
 				} catch (e) {
 					
 				}
 
 			} else {
-				selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
+				//selectAddonFileInExplorer(addon, filePath, explorer, explorerView, nearElPath);
 			}
 		}
 	}

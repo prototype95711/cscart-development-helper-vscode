@@ -15,7 +15,7 @@ export async function showNewTranslateFilePicker(
     onDidChangeSelectionCallback: (
         selectedFile: string,
         addonExplorer: AddonExplorer, 
-        view: vscode.TreeView<Addon | AddonEntry>
+        addon: string
     ) => Promise<void>
 ) {
     const picker = new NewTranslateFilePicker(addonReader);
@@ -23,7 +23,7 @@ export async function showNewTranslateFilePicker(
     pick.items = await picker.getAddonPickerList(addon);
     pick.onDidChangeSelection(selection => {
         if (selection[0]) {
-            onDidChangeSelectionCallback(selection[0].label, addonExplorer, view);
+            onDidChangeSelectionCallback(selection[0].label, addonExplorer, addon);
         }
         pick.hide();
     });

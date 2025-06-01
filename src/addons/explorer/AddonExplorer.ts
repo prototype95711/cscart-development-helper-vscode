@@ -229,7 +229,11 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this.saveCurrentConfiguration();
 	}
 
-	protected openAddon(addon: string, needRefresh: boolean = true): void {
+	protected openAddon(addon: string, needRefresh: boolean = true): void 
+	{
+		if (addon.includes("/")) {
+			return;
+		}
 
 		if (this._selectedAddons.indexOf(addon) === -1) {
 			this._selectedAddons.push(addon);
@@ -285,8 +289,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 				}
 			);
 		}
-		
-		this.refresh();
+
+		setTimeout(() => {
+			this.refresh();
+		}, 500);
 	}
 
 	getTreeItem(element: Addon | AddonEntry): vscode.TreeItem {
@@ -352,6 +358,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	public getParent(element: Addon | AddonEntry): Addon | AddonEntry | undefined {
 		return this._getParent(element);
 	}
+
+	/*async resolveTreeItem(item: vscode.TreeItem, element: Addon | AddonEntry, token: vscode.CancellationToken): Promise<vscode.TreeItem> {
+		console.log('START');
+		await new Promise(resolve => setTimeout(resolve, 2000));
+		console.log('DONE');
+
+		return item;
+	}*/
 
 	async getChildren(element?: Addon | AddonEntry, isVirtual: boolean = false): Promise<Addon[] | AddonEntry[]> {
 
@@ -1355,6 +1369,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			this.addonReader,
 			resource
 		);
+		addonTranslator.normalize();
 		const explorer = this;
 		addonTranslator.onDidSaveTranslateFiles(function() {
 			explorer.refreshAddonItems(resource.addon);
