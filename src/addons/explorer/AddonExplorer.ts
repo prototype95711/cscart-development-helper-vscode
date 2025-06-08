@@ -292,7 +292,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 
 		setTimeout(() => {
 			this.refresh();
-		}, 500);
+		}, 500 + (configuration.selectedAddons.length > 5 ? configuration.selectedAddons.length * 50 : 0));
 	}
 
 	getTreeItem(element: Addon | AddonEntry): vscode.TreeItem {
