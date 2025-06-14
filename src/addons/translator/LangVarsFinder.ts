@@ -39,10 +39,12 @@ export class LangVarsFinder {
         const children = await readDirectory(uri);
 
         if (children?.length > 0) {
-            var is_block_manager_scheme = false;
+            var is_block_manager_scheme = false, is_menu_scheme = false;
 
             if (uri.path.includes('/schemas/block_manager')) {
                 is_block_manager_scheme = true;
+            } else if (uri.path.includes('/schemas/menu')) {
+                is_menu_scheme = true;
             }
 
             await Promise.all(
@@ -63,7 +65,7 @@ export class LangVarsFinder {
                         if (exIndex > -1) {
                             await this.findLangVarsInFile(
                                 path.join(uri.fsPath, children[0]), 
-                                {isBlockManagerSchema: is_block_manager_scheme}
+                                {isBlockManagerSchema: is_block_manager_scheme, isMenuSheme: is_menu_scheme}
                             );
                         }
                     }
@@ -90,6 +92,13 @@ export class LangVarsFinder {
         if (options?.isBlockManagerSchema) {
             const regExpBm = 'schema\\[[\'"]' + this.addon + '[√\\w.]*[\'"]';
             await this.findResultsInFileByPattern(fileData, regExpBm, true, 'block_', ['', '_description']);
+
+        } else if (options?.isMenuSheme) {
+            const regExpMm = '\\[[\'"]' + this.addon + '[√\\w.]*[\'"]\\]';
+            await this.findResultsInFileByPattern(fileData, regExpMm, true, '', ['', '_menu_description']);
+
+            const regExpMm2 = '[\'"]' + this.addon + '[√\\w.]*[\'"][\\s{0,}]=>';
+            await this.findResultsInFileByPattern(fileData, regExpMm2, true, '', ['', '_menu_description']);
         }
     }
 
