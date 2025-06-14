@@ -6,7 +6,9 @@ import { AddonReader } from '../AddonReader';
 import * as afs from '../../utility/afs';
 import path from 'path';
 
+const { parseString } = require('xml2js');
 const fileExtensionsWithLangvars = ['.php', '.tpl', '.js', '.xml'];
+const DOCUMENT_XML_INVALID_ERROR = "{addon}: {filepath} document is invalid???";
 
 export class LangVarsFinder {
 
@@ -63,9 +65,11 @@ export class LangVarsFinder {
                         );
 
                         if (exIndex > -1) {
+                            var fileUrl = path.join(uri.fsPath, children[0]), is_xml = fileUrl.includes('.xml');
+
                             await this.findLangVarsInFile(
                                 path.join(uri.fsPath, children[0]), 
-                                {isBlockManagerSchema: is_block_manager_scheme, isMenuSheme: is_menu_scheme}
+                                {isBlockManagerSchema: is_block_manager_scheme, isMenuSheme: is_menu_scheme, isXml: is_xml}
                             );
                         }
                     }
@@ -99,6 +103,52 @@ export class LangVarsFinder {
 
             const regExpMm2 = '[\'"]' + this.addon + '[√\\w.]*[\'"][\\s{0,}]=>';
             await this.findResultsInFileByPattern(fileData, regExpMm2, true, '', ['', '_menu_description']);
+
+        } else if (options?.isXml) {
+            var isEmailTemplates = fileData.includes('<email_templates'), isInternalTemplates = fileData.includes('<internal_templates'),
+                isDocumentTemplates = fileData.includes('<documents');
+            
+            if (isEmailTemplates || isInternalTemplates || isDocumentTemplates) {
+                var fileJson = '';
+                const reading = (err: any, result: any) => {
+                    if (err || !result) {
+                        vscode.window.showWarningMessage(DOCUMENT_XML_INVALID_ERROR.replace("{addon}", this.addon).replace("{filepath}", uri));
+                    } else {
+                        fileJson = JSON.stringify(result);
+                    }
+                };
+                
+                parseString(
+                    fileData,
+                    reading
+                );
+        
+                const jsonFileData = JSON.parse(fileJson);
+
+                if (jsonFileData?.email_templates?.templates?.[0]?.item) {
+                    jsonFileData?.email_templates?.templates?.[0]?.item.forEach((template: any) => {
+                        if (template?.addon?.[0] === this.addon && template?.code?.[0]) {
+                            this.langVars.push('email_template.'.concat(template.code[0])); 
+                        }
+                    });
+                }
+
+                if (jsonFileData?.internal_templates?.templates?.[0]?.item) {
+                    jsonFileData?.internal_templates?.templates?.[0]?.item.forEach((template: any) => {
+                        if (template?.addon?.[0] === this.addon && template?.code?.[0]) {
+                            this.langVars.push('internal_template.'.concat(template.code[0])); 
+                        }
+                    });
+                }
+
+                if (jsonFileData?.documents?.document) {
+                    jsonFileData?.documents?.document.forEach((document: any) => {
+                        if (document?.addon?.[0] === this.addon && document?.code?.[0] && document?.type?.[0]) {
+                            this.langVars.push('template_document_'.concat(document.type[0]).concat('_').concat(document.code[0])); 
+                        }
+                    });
+                }
+            }
         }
     }
 
@@ -164,6 +214,8 @@ export class LangVarsFinder {
                 langVarName = langVarText.split('\'')?.[1];
             } else if (langVarText.includes('block-description:')) {
                 langVarName = langVarText.split('block-description:')?.[1].replace('**}', '').trim();
+            } else if (langVarText.includes('<code>')) {
+                langVarName = langVarText.replace('<code><![CDATA[', '').replace(']]></code>', '').trim();
             } else {
                 langVarName = langVarText.trim();
             }
