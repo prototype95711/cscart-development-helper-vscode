@@ -5,9 +5,9 @@
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
-  "version": "0.0.64",
+  "version": "0.0.65",
   "engines": {
-    "vscode": "^1.100.0"
+    "vscode": "^1.101.0"
   },
   "categories": [
     "Other"
@@ -392,7 +392,7 @@
     "@types/node": "18.x",
     "@types/readable-stream": "^4.0.11",
     "@types/rimraf": "^4.0.5",
-    "@types/vscode": "^1.100.0",
+    "@types/vscode": "^1.101.0",
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "eslint": "^8.52.0",

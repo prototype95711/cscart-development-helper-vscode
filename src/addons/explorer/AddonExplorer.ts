@@ -252,7 +252,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		this._onDidChangeTreeData.fire();
 	} 
 
-	async saveCurrentConfiguration(apply:boolean = false): Promise<void> {
+	async saveCurrentConfiguration(apply:boolean = false, skipDelay = false): Promise<void> {
 		const addonsConfiguration: AddonsConfiguration = {
 			selectedAddons: this._selectedAddons,
 			expandedElements: this.expanded
@@ -261,7 +261,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		await this.saveConfiguration(this.addonReader.workspaceFoler, addonsConfiguration);
 
 		if (apply) {
-			await this.applyConfiguration(addonsConfiguration);
+			await this.applyConfiguration(addonsConfiguration, skipDelay);
 		}
 	}
 
@@ -270,7 +270,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		vscode.workspace.getConfiguration("csDevHelper", workspaceFolderUri).update("addonExplorerConf", addonCofiguration);
 	}
 
-	async applyConfiguration(configuration: AddonsConfiguration): Promise<void>
+	async applyConfiguration(configuration: AddonsConfiguration, skipDelay = false): Promise<void>
 	{
 		this._selectedAddons = [];
 
@@ -290,9 +290,13 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			);
 		}
 
-		setTimeout(() => {
+		if (skipDelay) {
 			this.refresh();
-		}, 500 + (configuration.selectedAddons.length > 5 ? configuration.selectedAddons.length * 50 : 0));
+		} else {
+			setTimeout(() => {
+				this.refresh();
+			}, 500 + (configuration.selectedAddons.length > 5 ? configuration.selectedAddons.length * 50 : 0));
+		}
 	}
 
 	getTreeItem(element: Addon | AddonEntry): vscode.TreeItem {
@@ -1336,13 +1340,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		await vscode.commands.executeCommand('copyRelativeFilePath', bad);
 	}
 
-	public async closeAddon(resource: Addon, refresh: boolean = true) {
+	public async closeAddon(resource: Addon) {
 		await this.unselectAddon(resource);
-		await this.saveCurrentConfiguration(true);
-
-		if (refresh) {
-			this.refresh();
-		}
+		await this.saveCurrentConfiguration(true, true);
 	}
 
 	public refreshAddonItems(addon: string) {
