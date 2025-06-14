@@ -39,6 +39,11 @@ export class LangVarsFinder {
         const children = await readDirectory(uri);
 
         if (children?.length > 0) {
+            var is_block_manager_scheme = false;
+
+            if (uri.path.includes('/schemas/block_manager')) {
+                is_block_manager_scheme = true;
+            }
 
             await Promise.all(
                 children.map(async children => {
@@ -56,7 +61,10 @@ export class LangVarsFinder {
                         );
 
                         if (exIndex > -1) {
-                            await this.findLangVarsInFile(path.join(uri.fsPath, children[0]));
+                            await this.findLangVarsInFile(
+                                path.join(uri.fsPath, children[0]), 
+                                {isBlockManagerSchema: is_block_manager_scheme}
+                            );
                         }
                     }
                 })
@@ -64,18 +72,33 @@ export class LangVarsFinder {
         }
     }
 
-    async findLangVarsInFile(uri: string) {
+    async findLangVarsInFile(uri: string, options: any = {}) {
         const fileData = await afs.readFile(uri);
 
         if (!fileData) {
             return;
         }
         const regExp = '(_)[(][\'"]' + this.addon + '[√\\w.]*[\'"]';
-        const options: IPatternInfo = {
+        
+        await this.findResultsInFileByPattern(fileData, regExp);
+
+        if (uri.includes('.tpl')) {
+            const regExpBd = '\\{\\*\\*[\\s{0,}]block-description\:[√\\w.]*[\\s{0,}]\\*\\*\\}';
+            await this.findResultsInFileByPattern(fileData, regExpBd, true);
+        }
+
+        if (options?.isBlockManagerSchema) {
+            const regExpBm = 'schema\\[[\'"]' + this.addon + '[√\\w.]*[\'"]';
+            await this.findResultsInFileByPattern(fileData, regExpBm, true, 'block_', ['', '_description']);
+        }
+    }
+
+    async findResultsInFileByPattern(fileData: Buffer, regExp: string, isRegExp: boolean = true, prefix: Array<string>|string = '', postfix: Array<string>|string = '') {
+        const pOptions: IPatternInfo = {
             pattern: regExp,
             isRegExp: true
         }; 
-        const pattern = createSearchRegExp(options);
+        const pattern = createSearchRegExp(pOptions);
 
         const fileResults = getFileResults(fileData, pattern, {
             afterContext: 0,
@@ -87,32 +110,36 @@ export class LangVarsFinder {
         if (fileResults?.length > 0) {
             fileResults.map(result => {
                 if (resultIsMatch(result)) {
-                    this.parseResult(result);
+                    this.parseResult(result, prefix, postfix);
                 }
             });
         }
     }
     
-    parseResult(result: ITextSearchMatch) {
+    parseResult(result: ITextSearchMatch, prefix: Array<string>|string = '', postfix: Array<string>|string = '') {
         if (result.preview.text.length > 0) {
 
             if (Array.isArray(result.preview.matches)) {
                 result.preview.matches.map(match => {
                     this.parseResultText(
                         result.preview.text,
-                        match
+                        match,
+                        prefix,
+                        postfix
                     );
                 });
             } else {
                 this.parseResultText(
                     result.preview.text,
-                    result.preview.matches
+                    result.preview.matches,
+                    prefix,
+                    postfix
                 );
             }
         }
     }
 
-    parseResultText(text: string, matches: ISearchRange) {
+    parseResultText(text: string, matches: ISearchRange, prefix: Array<string>|string = '', postfix: Array<string>|string = '') {
         const langVarText = text.slice(
             matches.startColumn,
             matches.endColumn
@@ -126,10 +153,32 @@ export class LangVarsFinder {
                 langVarName = langVarText.split('"')?.[1];
             } else if (langVarText.includes('\'')) {
                 langVarName = langVarText.split('\'')?.[1];
+            } else if (langVarText.includes('block-description:')) {
+                langVarName = langVarText.split('block-description:')?.[1].replace('**}', '').trim();
+            } else {
+                langVarName = langVarText.trim();
             }
 
             if (langVarName.trim() && !this.langVars.includes(langVarName)) {
-                this.langVars.push(langVarName);
+
+                if (Array.isArray(prefix) && prefix?.length > 0) {
+                    var pindex = 0;
+                    prefix.map(p => {
+                        var pf = Array.isArray(postfix) ? (postfix[pindex] ?? '') : postfix;
+                        this.langVars.push(p.concat(langVarName).concat(pf)); 
+                        pindex++;
+                    });
+
+                } else if (Array.isArray(postfix) && postfix?.length > 0) {
+                    var pr = prefix = Array.isArray(prefix) ? '' : prefix;
+                    postfix.map(p => {
+                        this.langVars.push(pr.concat(langVarName).concat(p)); 
+                    });
+                } else {
+                    prefix = Array.isArray(prefix) ? '' : prefix;
+                    postfix = Array.isArray(postfix) ? '' : postfix;
+                    this.langVars.push(prefix.concat(langVarName).concat(postfix));
+                }
             }
         }
     }
