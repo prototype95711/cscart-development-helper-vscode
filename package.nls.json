@@ -30,6 +30,7 @@
 	"addon_explorer.files.findInFolder": "Find in Folder...",
 	"addon_explorer.files.revealFileInExplorer": "Reveal in explorer",
 	"addon_explorer.refresh": "Refresh",
+	"addon_explorer.closeAllAddons": "Close all addons",
 	"overrides.list.title": "CS-Cart Overrides List",
 	"overrides.title": "Overrides",
 	"overrides.find": "Find Overrides",

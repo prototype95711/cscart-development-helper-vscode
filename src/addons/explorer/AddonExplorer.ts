@@ -144,6 +144,7 @@ export interface AddonEntry extends vscode.TreeItem {
 
 export function selectAddon(addon: string, addonExplorer: AddonExplorer) {
 	addonExplorer.add(addon);
+	vscode.commands.executeCommand('setContext', 'isAddonsOpened', true);
 }
 
 export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry>,  vscode.TreeDragAndDropController<AddonEntry>, vscode.FileSystemProvider {
@@ -290,12 +291,14 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			);
 		}
 
+		vscode.commands.executeCommand('setContext', 'isAddonsOpened', configuration.selectedAddons.length > 0);
+
 		if (skipDelay) {
 			this.refresh();
 		} else {
 			setTimeout(() => {
 				this.refresh();
-			}, 500 + (configuration.selectedAddons.length > 5 ? configuration.selectedAddons.length * 50 : 0));
+			}, 700 + (configuration.selectedAddons.length > 5 ? configuration.selectedAddons.length * 50 : 0));
 		}
 	}
 
@@ -1302,11 +1305,11 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		}
 	}
 
-	public async collapseAddonFiles(resource: Addon) {
-		this.expanded = this.expanded.filter(e => e !== resource.addon);
+	public async collapseAddonFiles(addon: string, saveConf: boolean = true) {
+		this.expanded = this.expanded.filter(e => e !== addon);
 
 		this.tree.map(t => {
-			if (t.addon === resource.addon) {
+			if (t.addon === addon) {
 				const rPath = t?.uri?.path;
 
 				if (rPath) {
@@ -1317,7 +1320,9 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 			}
 		});
 		
-		await this.saveCurrentConfiguration();
+		if (saveConf) {
+			await this.saveCurrentConfiguration();
+		}
 	}
 
 	public async normalizeTranslateFiles(resource: Addon) {
@@ -1341,7 +1346,7 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 	}
 
 	public async closeAddon(resource: Addon) {
-		await this.unselectAddon(resource);
+		await this.unselectAddon(resource.addon);
 		await this.saveCurrentConfiguration(true, true);
 	}
 
@@ -1359,9 +1364,10 @@ export class AddonExplorer implements vscode.TreeDataProvider<Addon | AddonEntry
 		return this.tree.filter(ti => ti.addon === addon);
 	}
 
-	public async unselectAddon(resource: Addon) {
-		this._selectedAddons = this._selectedAddons.filter(a => a !== resource.addon);
-		await this.collapseAddonFiles(resource);
+	public async unselectAddon(addon: string, saveConf: boolean = true) {
+		this._selectedAddons = this._selectedAddons.filter(a => a !== addon);
+		vscode.commands.executeCommand('setContext', 'isAddonsOpened', this._selectedAddons.length > 0);
+		await this.collapseAddonFiles(addon, saveConf);
 	}
 
 	private initAddonTranslateFile(resource: Addon) : AddonTranslator {

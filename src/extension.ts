@@ -34,6 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	if (rootFolder && rootPath) {
 		vscode.commands.executeCommand('setContext', 'isCsCartWorkspaces', true);
+		vscode.commands.executeCommand('setContext', 'isAddonsOpened', false);
 
 		// Register addons explorer
 		const addonReader = new AddonReader(rootFolder);
@@ -53,6 +54,15 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 		context.subscriptions.push(
 			vscode.commands.registerCommand('csAddonExplorer.refresh', () => addonExplorer.refresh())
+		);
+		context.subscriptions.push(
+			vscode.commands.registerCommand('csAddonExplorer.closeAddons', () => {
+				if (addonExplorer.getOpenedAddonsList()?.length > 0) {
+					addonExplorer.getOpenedAddonsList().map(a => addonExplorer.unselectAddon(a, false));
+					addonExplorer.saveCurrentConfiguration(true, true);
+				}
+				vscode.commands.executeCommand('setContext', 'isAddonsOpened', false);
+			})
 		);
 
 		context.subscriptions.push(

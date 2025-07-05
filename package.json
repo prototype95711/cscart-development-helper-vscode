@@ -172,6 +172,14 @@
         "title": "%overrides.openFile%"
       },
       {
+        "command": "csAddonExplorer.closeAddons",
+        "title": "%addon_explorer.closeAllAddons%",
+        "icon": {
+          "light": "resources/light/close.svg",
+          "dark": "resources/dark/close.svg"
+        }
+      },
+      {
         "command": "csAddonExplorer.refresh",
         "title": "%addon_explorer.refresh%",
         "icon": {
@@ -197,6 +205,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "csAddonExplorer.closeAddons",
+          "when": "view == csAddonExplorer && isCsCartWorkspaces && isAddonsOpened",
+          "group": "navigation@1"
+        },
         {
           "command": "csAddonExplorer.openAddon",
           "when": "view == csAddonExplorer && isCsCartWorkspaces",
