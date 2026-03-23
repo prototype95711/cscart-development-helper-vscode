@@ -5,7 +5,7 @@
   "description": "Unofficial extension for CS-Cart developers",
   "repository": "https://github.com/prototype95711/cscart-development-helper-vscode/",
   "icon": "icon.png",
-  "version": "0.0.66",
+  "version": "0.0.67",
   "engines": {
     "vscode": "^1.101.0"
   },
@@ -46,17 +46,21 @@
       ]
     },
     "configuration": {
-        "properties": {
-            "csDevHelper.addonExplorerConf": {
-                "type": "object",
-                "default": {}
-            }
+      "properties": {
+        "csDevHelper.addonExplorerConf": {
+          "type": "object",
+          "default": {}
         }
+      }
     },
     "commands": [
       {
         "command": "csAddonExplorer.findOverrides",
         "title": "%overrides.find%"
+      },
+      {
+        "command": "csAddonExplorer.findHandlers",
+        "title": "%handlers.find%"
       },
       {
         "command": "csAddonExplorer.collapseAddonItems",
@@ -202,6 +206,11 @@
           "command": "csAddonExplorer.findOverrides",
           "when": "isMayBeCSOverrides && isCsCartWorkspaces",
           "group": "navigation@1.31"
+        },
+        {
+          "command": "csAddonExplorer.findHandlers",
+          "when": "isMayBeCSHandlers && isCsCartWorkspaces",
+          "group": "navigation@1.31"
         }
       ],
       "view/title": [
@@ -299,6 +308,11 @@
         },
         {
           "command": "csAddonExplorer.findOverrides",
+          "when": "view == csAddonExplorer && viewItem == template_file",
+          "group": "2@1"
+        },
+        {
+          "command": "csAddonExplorer.findHandlers",
           "when": "view == csAddonExplorer && viewItem == template_file",
           "group": "2@1"
         },
@@ -409,7 +423,7 @@
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "eslint": "^8.52.0",
-    "mocha": "^10.2.0",
+    "mocha": "^10.8.2",
     "typescript": "^5.2.2"
   },
   "dependencies": {

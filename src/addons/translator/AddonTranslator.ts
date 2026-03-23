@@ -157,18 +157,9 @@ export class AddonTranslator {
                     lv[1].values = lv[1].values.map(
                         lvv => {
                             var existId = lvv.id.trim()?.length > 0;
-                            const existVal = lvv.value.findIndex(
-                                v => {return v.trim()?.length > 0;}
-                            ) > -1;
 
-                            if (!existId) {
-                                if (existCommonId) {
-                                    lvv.id = commonId;
-                                } else if (existVal) {
-                                    lvv.id = lvv.value[0];
-                                }
-
-                                existId = true;
+                            if (existCommonId && (!existId || lvv.id !== commonId)) {
+                                lvv.id = commonId;
                             }
 
                             return lvv;
@@ -226,15 +217,50 @@ export class AddonTranslator {
 
         try {
             var translate = require("translate-google-fixed-api");
+            var result;
 
-            for (var lv of toTranslate) {
+            for (let i = 0, len = toTranslate.length; i < len; i++) {
+                var lv = toTranslate[i];
                 var valWithId = lv[1].values.find(v => {return v.id.trim();});
+
+                if (isDefaultLanguage && !valWithId || !valWithId?.id) {
+                    var valToId = lv[1].values.find(v => {return v.value.find(vv => {return vv.trim();});});
+
+                    if (valToId?.value) {
+                        let to_translate = valToId.value.join(' <--> ');
+                        const exist_id_key = translatedStrings.findIndex(ts => {return ts.id === to_translate;});
+
+                        if (exist_id_key === -1) {
+                            result = await translate(to_translate, {
+                                tld: "ru",
+                                to: lang_code
+                            });
+                            translatedStrings.push({id: to_translate, value: result?.[0]});
+                        } else {
+                            result = translatedStrings[exist_id_key].value;
+                        }
+
+                        if (result?.[0]?.length > 0) {
+                            var newId = result[0];
+
+                            lv[1].values = lv[1].values.map(
+                                val => {
+                                    val.id = newId;
+
+                                    return val;
+                                }
+                            );
+                            toTranslate[i] = lv;
+
+                            valWithId = lv[1].values.find(v => {return v.id.trim();});
+                        }
+                    }
+                }
 
                 if (!valWithId || !valWithId?.id) {
                     continue;
                 }
                 
-                var result;
                 const _key = translatedStrings.findIndex(ts => {return ts.id === valWithId?.id;});
 
                 if (_key === -1) {
@@ -264,10 +290,6 @@ export class AddonTranslator {
                                 val.value = [translated];
                             }
 
-                            if (isDefaultLanguage && translated.trim()) {
-                                val.id = translated;
-                            }
-
                             return val;
                         }
                     );
@@ -285,7 +307,7 @@ export class AddonTranslator {
             }
 
         } catch (e) {
-            
+            console.log(e);
         }
     }
 
@@ -477,7 +499,7 @@ export class AddonTranslator {
         for (const data in langvar_data) {
             const _langvar_value_data: LangVarValue = { 
                 lang_code: lang_code,
-                id: langvar_data[data].msgid ?? lang_code,
+                id: langvar_data[data]?.msgid ? langvar_data[data].msgid  : '',
                 value: langvar_data[data]?.msgstr ?? '',
                 plural: langvar_data[data]?.msgid_plural ?? '',
                 comments: langvar_data[data].comments

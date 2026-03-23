@@ -34,6 +34,7 @@
 	"overrides.list.title": "CS-Cart Overrides List",
 	"overrides.title": "Overrides",
 	"overrides.find": "Find Overrides",
+	"handlers.find": "Find Handlers",
 	"overrides.openFile": "Open file",
 	"overrides.refresh": "Find now",
 	"colors.added": "Added"
